@@ -57,6 +57,8 @@ flowchart LR
 | Store administrator | `admin@nopbench.invalid`, password generated per run, kept in `<work>\secrets\legacy-admin.json` | step 4 |
 | Recording proxy (planned, P4) | `http://localhost:8000/` → `http://localhost:8080/` | P4 |
 | Candidate (planned, P7) | `http://localhost:8090/`, its own database copy | P7 |
+| P3 warm-up: eShopLegacyMVC | `http://localhost:8081/`, IIS site `eshop-legacy`, mock data (no database) | [`scripts/eshop/2-deploy-eshop.ps1`](../scripts/eshop/2-deploy-eshop.ps1) |
+| P3 warm-up: recording proxy | `http://127.0.0.1:8001/` → `http://localhost:8081/` | [`scripts/eshop/3-record-eshop.ps1`](../scripts/eshop/3-record-eshop.ps1) |
 
 `<work>` is the scripts' work root: `C:\nopbench` by default, `D:\a\_temp\nopbench` on a
 hosted runner (`NOPBENCH_WORK`).
@@ -64,10 +66,21 @@ hosted runner (`NOPBENCH_WORK`).
 ## In CI
 
 ```
-lint  (ubuntu-24.04)   PSScriptAnalyzer on scripts/
-build (windows-2022)   1-fetch -> 2-build          -> artifact legacy-site (site + manifest)
-iis   (windows-2022)   needs build: 3-install-iis-sql -> 4-deploy-and-install -> 5-smoke
+legacy-build.yml
+  lint  (ubuntu-24.04)   PSScriptAnalyzer on scripts/
+  build (windows-2022)   1-fetch -> 2-build          -> artifact legacy-site (site + manifest)
+  iis   (windows-2022)   needs build: 3-install-iis-sql -> 4-deploy-and-install -> 5-smoke
+
+warmup-eshop.yml (P3)
+  tools   (ubuntu-24.04)  chain-tools.yml: sk and Portcullis at their pinned commits -> chain-tools
+  legacy  (windows-2022)  eshop 1-build -> IIS -> 2-deploy -> 3-record (sk capture)
+                          -> 4-replay (sk replay, A/A) -> 5-scan (Portcullis) -> eshop-recordings
+  verdict (ubuntu-24.04)  6-verdict: sk compare, sk gate, sk evidence       -> eshop-evidence-pack
 ```
+
+The warm-up is the first run of the split described below: everything that needs the
+running application on the Windows runner, everything that is file in, file out on Linux
+([ADR 0004](adr/0004-chain-tools-and-eshop-warmup.md)).
 
 GitHub-hosted runners do not share a network: a job on a Linux runner cannot reach IIS
 on a Windows runner. That is why capture and replay are planned **inside the Windows

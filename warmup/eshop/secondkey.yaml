@@ -1,0 +1,27 @@
+# Second Key configuration for the P3 warm-up (docs/adr/0004-chain-tools-and-eshop-warmup.md):
+# the replay of the eShopLegacyMVC recording. The scripts pass the capture, the run and
+# both base URLs on the command line; this file holds what the command line cannot say.
+# Run sk from the repository root: the reset command's path is relative to it.
+version: 1
+replay:
+  scenarioMode: session
+  # The first request after a restart starts the application and compiles its views.
+  timeoutSeconds: 120
+  # The mock catalog lives in the application's memory: the only reset is a new process.
+  legacy:
+    reset:
+      command:
+        run: 'powershell -NoProfile -ExecutionPolicy Bypass -File scripts\eshop\Reset-EShop.ps1'
+  candidate:
+    reset:
+      command:
+        run: 'powershell -NoProfile -ExecutionPolicy Bypass -File scripts\eshop\Reset-EShop.ps1'
+  # Create, edit and delete validate an anti-forgery token issued with the form.
+  correlation:
+    - name: csrf
+      regex: 'name="__RequestVerificationToken" type="hidden" value="([^"]+)"'
+      formField: __RequestVerificationToken
+compare:
+  contract: contract.yaml
+evidence:
+  contract: contract.yaml

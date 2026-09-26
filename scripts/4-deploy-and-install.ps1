@@ -97,22 +97,8 @@ function Complete-Phase {
 }
 
 function Invoke-AppCmd {
-    # appcmd reports "not found" through its exit code; callers that probe pass
-    # -AllowFailure and look at the output instead.
     param([string[]] $Arguments, [switch] $AllowFailure)
-    $previous = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    try {
-        $output = & $appcmd @Arguments
-        $code = $LASTEXITCODE
-    }
-    finally {
-        $ErrorActionPreference = $previous
-    }
-    if ($code -ne 0 -and -not $AllowFailure) {
-        throw ('appcmd {0} failed ({1}): {2}' -f ($Arguments -join ' '), $code, ($output -join ' '))
-    }
-    return $output
+    return (Invoke-BenchAppCmd -Arguments $Arguments -AllowFailure:$AllowFailure)
 }
 
 # --- Inputs -------------------------------------------------------------------------

@@ -40,6 +40,14 @@ CI runs all five scripts on `windows-2022` runners
 site as the `legacy-site` artifact, and the next job deploys that artifact and runs the
 smoke test. Parameters, hand-off files and recipes: [`scripts/README.md`](scripts/README.md).
 
+## Warm-up: the chain on eShopLegacyMVC (P3)
+
+Before the chain meets nopCommerce it runs once, end to end, on Microsoft's sample legacy
+application eShopLegacyMVC (on its own mock data): capture, A/A replay, compare, gate and
+evidence pack, in [`warmup-eshop.yml`](.github/workflows/warmup-eshop.yml). The chain's
+tools, `sk` and Portcullis, are built from commits pinned in [`pins.json`](pins.json).
+What it does and how to run it: [`warmup/eshop/`](warmup/eshop/README.md).
+
 ## Licence
 
 The bench (scripts, traffic, contract, results) is all rights reserved; see

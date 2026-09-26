@@ -1,5 +1,5 @@
 {
-  "_comment": "Single source of truth for everything the legacy side downloads. Every download is verified against these values before it is used. Changing a value is a decision: record the reason in docs/adr/.",
+  "_comment": "Single source of truth for everything the bench downloads or builds: the legacy side, the Second Key chain's tools and the warm-up application. Every download is verified against these values before it is used. Changing a value is a decision: record the reason in docs/adr/.",
   "nopCommerce": {
     "repository": "https://github.com/nopSolutions/nopCommerce.git",
     "tag": "release-3.90",
@@ -29,6 +29,44 @@
       "signer": "Microsoft Corporation",
       "instanceName": "SQLEXPRESS",
       "collation": "SQL_Latin1_General_CP1_CI_AS"
+    }
+  },
+  "eShopModernizing": {
+    "_comment": "P3 warm-up only (docs/adr/0004): Microsoft's sample legacy ASP.NET MVC 5 application, used as it is.",
+    "repository": "https://github.com/dotnet-architecture/eShopModernizing.git",
+    "commit": "63bc9ec4414d7e281dc9f9d7bdcf70030950457d",
+    "webProject": "eShopLegacyMVCSolution/src/eShopLegacyMVC/eShopLegacyMVC.csproj",
+    "sourceDirectory": "eShopLegacyMVCSolution/src/eShopLegacyMVC",
+    "referenceAssemblies": [
+      {
+        "id": "Microsoft.NETFramework.ReferenceAssemblies.net461",
+        "version": "1.0.3",
+        "url": "https://api.nuget.org/v3-flatcontainer/microsoft.netframework.referenceassemblies.net461/1.0.3/microsoft.netframework.referenceassemblies.net461.1.0.3.nupkg",
+        "sha256": "bd52289e5fb8765090bb189b399a06477a350c0863018a455b5e5d9e45298cc9",
+        "framework": "v4.6.1"
+      },
+      {
+        "id": "Microsoft.NETFramework.ReferenceAssemblies.net472",
+        "version": "1.0.3",
+        "url": "https://api.nuget.org/v3-flatcontainer/microsoft.netframework.referenceassemblies.net472/1.0.3/microsoft.netframework.referenceassemblies.net472.1.0.3.nupkg",
+        "sha256": "ffa0a5570a39f911399164d0581ffddef99b5e3dfbaa5f220e5ce22969bcf57c",
+        "framework": "v4.7.2"
+      }
+    ]
+  },
+  "chain": {
+    "_comment": "The Second Key tools the bench drives, built from these commits (docs/adr/0004). CI checks each one out with actions/checkout at the commit and builds the project with the .NET 10 SDK.",
+    "secondKey": {
+      "repository": "konradcinkusz/letsgolegacy.secondkey",
+      "commit": "967c49c0005c4412180914f43437d75b43f148dc",
+      "project": "src/SecondKey.Cli/SecondKey.Cli.csproj",
+      "assembly": "SecondKey.Cli.dll"
+    },
+    "portcullis": {
+      "repository": "konradcinkusz/letsgolegacy.portcullis",
+      "commit": "84e1925fe0d85cf23415f0d33c98590f86128722",
+      "project": "src/Portcullis.Cli/Portcullis.Cli.csproj",
+      "assembly": "Portcullis.Cli.dll"
     }
   }
 }

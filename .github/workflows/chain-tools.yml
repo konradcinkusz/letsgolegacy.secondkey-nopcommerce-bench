@@ -1,0 +1,86 @@
+# The Second Key chain's tools, built once per workflow run from the commits pinned in
+# pins.json (chain.secondKey, chain.portcullis) and handed to the jobs that drive them as
+# the chain-tools artifact. A portable framework-dependent build: the same files run on
+# the Windows host (capture, replay) and on Linux (compare, gate, evidence).
+# Called by the workflows that need the chain; not triggered on its own.
+name: chain-tools
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build sk and Portcullis at their pinned commits
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      DOTNET_NOLOGO: 'true'
+      DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+    steps:
+      - name: Check out the bench
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read the pins
+        id: pins
+        run: |
+          jq -e -r '"secondkey-repository=\(.chain.secondKey.repository)",
+                    "secondkey-commit=\(.chain.secondKey.commit)",
+                    "portcullis-repository=\(.chain.portcullis.repository)",
+                    "portcullis-commit=\(.chain.portcullis.commit)"' pins.json >> "$GITHUB_OUTPUT"
+
+      - name: Check out Second Key (sk) at the pinned commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ steps.pins.outputs.secondkey-repository }}
+          ref: ${{ steps.pins.outputs.secondkey-commit }}
+          path: chain-src/secondkey
+          persist-credentials: false
+
+      - name: Check out Portcullis at the pinned commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ steps.pins.outputs.portcullis-repository }}
+          ref: ${{ steps.pins.outputs.portcullis-commit }}
+          path: chain-src/portcullis
+          persist-credentials: false
+
+      - name: Set up the .NET SDK sk pins
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: chain-src/secondkey/global.json
+
+      - name: Build
+        run: |
+          set -euo pipefail
+          for tool in secondkey portcullis; do
+            commit="$(git -C "chain-src/$tool" rev-parse HEAD)"
+            echo "$tool at $commit"
+          done
+          [ "$(git -C chain-src/secondkey rev-parse HEAD)" = "${{ steps.pins.outputs.secondkey-commit }}" ]
+          [ "$(git -C chain-src/portcullis rev-parse HEAD)" = "${{ steps.pins.outputs.portcullis-commit }}" ]
+          dotnet build "chain-src/secondkey/$(jq -r .chain.secondKey.project pins.json)" --configuration Release --nologo -o chain-tools/secondkey
+          dotnet build "chain-src/portcullis/$(jq -r .chain.portcullis.project pins.json)" --configuration Release --nologo -o chain-tools/portcullis
+          dotnet chain-tools/secondkey/SecondKey.Cli.dll --help > /dev/null
+          printf '%s\n' "secondkey $(git -C chain-src/secondkey rev-parse HEAD)" "portcullis $(git -C chain-src/portcullis rev-parse HEAD)" > chain-tools/COMMITS
+          {
+            echo '### Chain tools'
+            echo
+            echo '| Tool | Repository | Commit |'
+            echo '|---|---|---|'
+            echo "| sk | \`${{ steps.pins.outputs.secondkey-repository }}\` | \`${{ steps.pins.outputs.secondkey-commit }}\` |"
+            echo "| Portcullis | \`${{ steps.pins.outputs.portcullis-repository }}\` | \`${{ steps.pins.outputs.portcullis-commit }}\` |"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the tools
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: chain-tools
+          path: chain-tools
+          if-no-files-found: error
+          retention-days: 7
