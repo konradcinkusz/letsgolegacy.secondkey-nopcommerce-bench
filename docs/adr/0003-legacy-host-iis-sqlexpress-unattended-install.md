@@ -97,5 +97,16 @@ Step 4 refuses to start if the port is taken.
 - If Microsoft replaces the file behind the pinned URL, step 3 fails on the SHA-256
   check with both hashes in the message. Updating the pin is then a reviewed change,
   not an automatic one.
+- **Observed once: setup failing to start the engine.** The first CI run of step 3
+  ([run 36229287543](https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36229287543))
+  failed after 11 minutes with "Could not find the Database Engine startup handle"
+  (`0x851A0019`); the next run, with identical inputs, installed in 2.5 minutes. The
+  best-known cause of that error — a system drive reporting atomic sectors above 4 KB,
+  which SQL Server cannot use — is ruled out for that runner: its C: reports 4096 bytes.
+  Step 3 therefore (a) logs the sector sizes and, only if the system drive reports more
+  than 4 KB, moves the data files to the work-root drive; (b) prints the engine's
+  `ERRORLOG` and SQL Server events when setup fails, so the cause is in the job log; and
+  (c) removes the half-installed instance and runs setup once more. A second failure
+  fails the job.
 - The sample data is nopCommerce's own and dated 2017. Time-dependent behaviour (for
   example a sample discount that expired on 2020-01-01) is recorded as it is.

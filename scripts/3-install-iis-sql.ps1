@@ -196,14 +196,30 @@ if (-not $SkipSql) {
             '/SKIPRULES=RebootRequiredCheck'
         )
         if ($dataDir) { $setupArguments += ('/INSTALLSQLDATADIR="{0}"' -f $dataDir) }
-        Write-BenchLog ('> {0} {1}' -f $setup, ($setupArguments -join ' '))
-        $process = Start-Process -FilePath $setup -ArgumentList $setupArguments -Wait -PassThru -NoNewWindow
-        $setupCode = $process.ExitCode
-        if (@(0, 3010) -notcontains $setupCode) {
+
+        # Setup has been seen to fail once on a hosted runner with "Could not find the
+        # Database Engine startup handle" and to succeed on the next run with identical
+        # inputs (docs/adr/0003). So a failed attempt is diagnosed, the half-installed
+        # instance removed, and setup run once more; a second failure is final.
+        $maxAttempts = 2
+        for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            Write-BenchLog ('> {0} {1}   (attempt {2} of {3})' -f $setup, ($setupArguments -join ' '), $attempt, $maxAttempts)
+            $process = Start-Process -FilePath $setup -ArgumentList $setupArguments -Wait -PassThru -NoNewWindow
+            $setupCode = $process.ExitCode
+            if (@(0, 3010) -contains $setupCode) { break }
+
             # Setup has already printed its summary. What it does not show is why the
             # engine would not start: that is in the instance's own error log.
             Write-SqlStartupDiagnostic -Instance $instance -DataDir $dataDir
-            throw ('SQL Server setup failed with exit code {0}.' -f $setupCode)
+            if ($attempt -eq $maxAttempts) { throw ('SQL Server setup failed with exit code {0} on every attempt.' -f $setupCode) }
+
+            Write-BenchLog ('Setup failed with exit code {0}; removing the half-installed instance before trying again.' -f $setupCode)
+            $uninstall = Start-Process -FilePath $setup -ArgumentList @('/Q', '/ACTION=Uninstall', '/FEATURES=SQLENGINE', ('/INSTANCENAME={0}' -f $instance)) -Wait -PassThru -NoNewWindow
+            Write-BenchLog ('Uninstall finished with exit code {0}.' -f $uninstall.ExitCode)
+            # Data and log files survive an uninstall and would stop a new instance with
+            # the same id from creating its system databases.
+            Get-ChildItem -Path (Join-Path $env:ProgramFiles ('Microsoft SQL Server\MSSQL*.{0}' -f $instance)) -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+            if ($dataDir) { Get-ChildItem -LiteralPath $dataDir -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue }
         }
         Write-BenchLog ('SQL Server setup finished with exit code {0}.' -f $setupCode)
         $installedNow = $true
