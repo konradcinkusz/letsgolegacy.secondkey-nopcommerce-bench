@@ -1,0 +1,13 @@
+diff --git a/src/Presentation/Nop.Web/Controllers/ProductController.cs b/src/Presentation/Nop.Web/Controllers/ProductController.cs
+index ba27329..9d73789 100644
+--- a/src/Presentation/Nop.Web/Controllers/ProductController.cs
++++ b/src/Presentation/Nop.Web/Controllers/ProductController.cs
+@@ -115,8 +115,6 @@ namespace Nop.Web.Controllers
+                 return InvokeHttp404();
+ 
+             var notAvailable =
+-                //published?
+-                (!product.Published && !_catalogSettings.AllowViewUnpublishedProductPage) ||
+                 //ACL (access control list) 
+                 !_aclService.Authorize(product) ||
+                 //Store mapping

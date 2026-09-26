@@ -1,0 +1,13 @@
+diff --git a/src/Libraries/Nop.Services/Catalog/PriceFormatter.cs b/src/Libraries/Nop.Services/Catalog/PriceFormatter.cs
+index 0f026f4..6dae848 100644
+--- a/src/Libraries/Nop.Services/Catalog/PriceFormatter.cs
++++ b/src/Libraries/Nop.Services/Catalog/PriceFormatter.cs
+@@ -78,7 +78,7 @@ namespace Nop.Services.Catalog
+                 if (!String.IsNullOrEmpty(targetCurrency.DisplayLocale))
+                 {
+                     //default behavior
+-                    result = amount.ToString("C", new CultureInfo(targetCurrency.DisplayLocale));
++                    result = amount.ToString("C", CultureInfo.InvariantCulture);
+                 }
+                 else
+                 {

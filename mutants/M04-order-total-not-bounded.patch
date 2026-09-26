@@ -1,0 +1,29 @@
+diff --git a/src/Libraries/Nop.Services/Orders/OrderTotalCalculationService.cs b/src/Libraries/Nop.Services/Orders/OrderTotalCalculationService.cs
+index 5af55fd..4a8643f 100644
+--- a/src/Libraries/Nop.Services/Orders/OrderTotalCalculationService.cs
++++ b/src/Libraries/Nop.Services/Orders/OrderTotalCalculationService.cs
+@@ -1246,15 +1246,9 @@ namespace Nop.Services.Orders
+ 
+             discountAmount = GetOrderTotalDiscount(customer, resultTemp, out appliedDiscounts);
+ 
+-            //sub totals with discount        
+-            if (resultTemp < discountAmount)
+-                discountAmount = resultTemp;
+-
+             //reduce subtotal
+             resultTemp -= discountAmount;
+ 
+-            if (resultTemp < decimal.Zero)
+-                resultTemp = decimal.Zero;
+             if (_shoppingCartSettings.RoundPricesDuringCalculation)
+                 resultTemp = RoundingHelper.RoundPrice(resultTemp);
+ 
+@@ -1289,8 +1283,6 @@ namespace Nop.Services.Orders
+ 
+             #endregion
+ 
+-            if (resultTemp < decimal.Zero)
+-                resultTemp = decimal.Zero;
+             if (_shoppingCartSettings.RoundPricesDuringCalculation)
+                 resultTemp = RoundingHelper.RoundPrice(resultTemp);
+ 

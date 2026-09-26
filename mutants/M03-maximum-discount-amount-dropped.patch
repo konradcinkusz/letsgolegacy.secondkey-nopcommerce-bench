@@ -1,0 +1,12 @@
+diff --git a/src/Libraries/Nop.Services/Discounts/DiscountExtensions.cs b/src/Libraries/Nop.Services/Discounts/DiscountExtensions.cs
+index a745029..63a6c31 100644
+--- a/src/Libraries/Nop.Services/Discounts/DiscountExtensions.cs
++++ b/src/Libraries/Nop.Services/Discounts/DiscountExtensions.cs
+@@ -126,7 +126,6 @@ namespace Nop.Services.Discounts
+                 UsePercentage = discount.UsePercentage,
+                 DiscountPercentage = discount.DiscountPercentage,
+                 DiscountAmount = discount.DiscountAmount,
+-                MaximumDiscountAmount = discount.MaximumDiscountAmount,
+                 StartDateUtc = discount.StartDateUtc,
+                 EndDateUtc = discount.EndDateUtc,
+                 RequiresCouponCode = discount.RequiresCouponCode,
