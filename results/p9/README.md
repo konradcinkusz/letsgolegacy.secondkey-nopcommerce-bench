@@ -159,7 +159,12 @@ Values are legacy → mutant, as `sk compare` reported them; scenarios are the
 - **Repeatable.** The workflow's first run,
   [36261713828](https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36261713828)
   on commit `733f8cf` — the same patches and scripts, before the summary job also printed
-  its file — came out the same: M00 pass, 11 of 11 killed.
+  its file — came out the same: M00 pass, 11 of 11 killed. The run on the commit that
+  added these results,
+  [36265101762](https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36265101762)
+  on `db364d4`, on twelve fresh runners again, matched this one exchange for exchange:
+  for every mutant and M00 the same outcome, the same regressed exchanges with the same
+  reasons and the same differing fields, the same clauses.
 
 ## Running it again
 
