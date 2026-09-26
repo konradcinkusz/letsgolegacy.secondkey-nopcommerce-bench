@@ -21,6 +21,14 @@
       "version": "1.0.3",
       "url": "https://api.nuget.org/v3-flatcontainer/microsoft.netframework.referenceassemblies.net451/1.0.3/microsoft.netframework.referenceassemblies.net451.1.0.3.nupkg",
       "sha256": "770b33dfa64dc430c9d9ba4e1438b920dee905f7ea60791147d70689f68692d3"
+    },
+    "sqlServerExpress": {
+      "product": "SQL Server 2022 Express (core media, x64, English)",
+      "url": "https://download.microsoft.com/download/3/8/d/38de7036-2433-4207-8eae-06e247e17b25/SQLEXPR_x64_ENU.exe",
+      "sha256": "2e61c8bbde6021f9026c54ad9db4bbb1227e68761d4c00a6a50a2c70fe7afe05",
+      "signer": "Microsoft Corporation",
+      "instanceName": "SQLEXPRESS",
+      "collation": "SQL_Latin1_General_CP1_CI_AS"
     }
   }
 }

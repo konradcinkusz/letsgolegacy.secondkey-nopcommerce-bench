@@ -22,10 +22,23 @@ On Windows with Visual Studio 2022 (or Build Tools 2022, web development workloa
 .\scripts\2-build-legacy.ps1        # restore, build (Release) and publish Nop.Web
 ```
 
-CI runs the same scripts on a `windows-2022` runner
-([`legacy-build.yml`](.github/workflows/legacy-build.yml)) and publishes the site as the
-`legacy-site` artifact. Parameters, hand-off files and recipes:
-[`scripts/README.md`](scripts/README.md).
+## Run the legacy shop
+
+On the same Windows host, from an elevated PowerShell:
+
+```powershell
+.\scripts\3-install-iis-sql.ps1      # IIS with ASP.NET 4.x, SQL Server 2022 Express (.\SQLEXPRESS)
+.\scripts\4-deploy-and-install.ps1   # IIS site on port 8080, nopCommerce installer with sample data
+.\scripts\5-smoke.ps1                # home, category, product and cart answer with nopCommerce content
+```
+
+The shop then answers at `http://localhost:8080/`. Where everything runs, and how the
+rest of the chain will reach it: [`docs/TOPOLOGY.md`](docs/TOPOLOGY.md).
+
+CI runs all five scripts on `windows-2022` runners
+([`legacy-build.yml`](.github/workflows/legacy-build.yml)): the build job publishes the
+site as the `legacy-site` artifact, and the next job deploys that artifact and runs the
+smoke test. Parameters, hand-off files and recipes: [`scripts/README.md`](scripts/README.md).
 
 ## Licence
 

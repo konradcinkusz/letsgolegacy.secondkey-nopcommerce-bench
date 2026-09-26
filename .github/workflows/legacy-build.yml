@@ -1,6 +1,9 @@
-# P1: build the pinned nopCommerce 3.x on a Windows runner and publish the site as an
-# artifact. The steps call the numbered runbook scripts, so a person on a Windows machine
-# runs exactly what CI runs (scripts/README.md).
+# The legacy side of the bench, on Windows runners:
+#   build (P1) - fetch the pinned nopCommerce 3.x, build it, publish the site as an artifact;
+#   iis   (P2) - deploy that artifact to IIS with SQL Server Express, install the sample
+#                data and check that the shop answers.
+# Every step calls a numbered runbook script, so a person on a Windows machine runs
+# exactly what CI runs (scripts/README.md).
 name: legacy-build
 
 on:
@@ -112,5 +115,57 @@ jobs:
         with:
           name: legacy-build-logs
           path: ${{ runner.temp }}\nopbench\logs
+          if-no-files-found: ignore
+          retention-days: 7
+
+  iis:
+    # P2: the shop answers at a URL. Same image as the build; the site arrives as the
+    # artifact the build job published, exactly as a person would deploy it.
+    name: Legacy under IIS with SQL Server (install, smoke)
+    needs: build
+    runs-on: ${{ inputs.runner || 'windows-2022' }}
+    timeout-minutes: 60
+    steps:
+      - name: Check out the bench
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set the work root
+        run: |
+          [System.IO.File]::AppendAllText($env:GITHUB_ENV, "NOPBENCH_WORK=$env:RUNNER_TEMP\nopbench`n")
+
+      - name: Download the published site
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: legacy-site
+          path: ${{ runner.temp }}\nopbench
+
+      - name: Cache the SQL Server media
+        # Re-verified against its pinned SHA-256 and Microsoft signature after restore.
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}\nopbench\downloads
+          key: legacy-iis-downloads-${{ hashFiles('pins.json') }}
+
+      - name: 3 - Enable IIS and install SQL Server Express
+        run: .\scripts\3-install-iis-sql.ps1
+
+      - name: 4 - Deploy to IIS and run the nopCommerce installer
+        run: .\scripts\4-deploy-and-install.ps1
+
+      - name: 5 - Smoke test (home, category, product, cart)
+        run: .\scripts\5-smoke.ps1
+
+      - name: Collect diagnostics
+        if: failure()
+        run: .\scripts\collect-diagnostics.ps1
+
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: legacy-iis-diagnostics
+          path: ${{ runner.temp }}\nopbench\diagnostics
           if-no-files-found: ignore
           retention-days: 7
