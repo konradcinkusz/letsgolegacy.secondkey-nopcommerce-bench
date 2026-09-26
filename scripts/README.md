@@ -68,6 +68,7 @@ Every value has a default; nothing is required.
 | `-AdminEmail` | 4 | `admin@nopbench.invalid` | Store administrator e-mail (reserved domain). |
 | `NOPBENCH_ADMIN_PASSWORD` | 4 | generated per run | Use a known administrator password instead of a generated one. Keep it out of files in the repository. |
 | `-BaseUrl` | 5 | from `state\deploy.json`, else `http://localhost:8080/` | Shop to test. |
+| `NOPBENCH_SK`, `NOPBENCH_PORTCULLIS` | steps that drive the chain | `<work>\tools\chain\secondkey\SecondKey.Cli.dll`, `<work>\tools\chain\portcullis\Portcullis.Cli.dll` | The chain's tools (below). |
 
 ## Hand-off files
 
@@ -101,11 +102,57 @@ then the default. You never have to remember where the last step put things.
   (open the port on the Windows host first; docs/TOPOLOGY.md has the command).
 - **After a failure:** `.\scripts\collect-diagnostics.ps1`, then read `<work>\diagnostics`.
 
+## The chain's tools
+
+The steps that drive Second Key run `sk` (and the P3 gate scan runs Portcullis) as
+`dotnet <assembly>`. CI builds both from the commits pinned in
+[`../pins.json`](../pins.json) (`chain`) in
+[`chain-tools.yml`](../.github/workflows/chain-tools.yml) and unpacks them into
+`<work>\tools\chain\`. To do the same by hand (the .NET 10 SDK is the only prerequisite):
+
+```sh
+git clone https://github.com/konradcinkusz/letsgolegacy.secondkey.git secondkey
+git -C secondkey checkout 967c49c0005c4412180914f43437d75b43f148dc   # chain.secondKey.commit
+dotnet build secondkey/src/SecondKey.Cli/SecondKey.Cli.csproj -c Release -o <work>/tools/chain/secondkey
+git clone https://github.com/konradcinkusz/letsgolegacy.portcullis.git portcullis
+git -C portcullis checkout 84e1925fe0d85cf23415f0d33c98590f86128722  # chain.portcullis.commit
+dotnet build portcullis/src/Portcullis.Cli/Portcullis.Cli.csproj -c Release -o <work>/tools/chain/portcullis
+```
+
+or point `NOPBENCH_SK` / `NOPBENCH_PORTCULLIS` at a `SecondKey.Cli.dll` / `Portcullis.Cli.dll`
+built elsewhere.
+
+## The P3 warm-up: `eshop\`
+
+The whole chain on Microsoft's eShopLegacyMVC, on its mock data
+([`../warmup/eshop/README.md`](../warmup/eshop/README.md),
+[ADR 0004](../docs/adr/0004-chain-tools-and-eshop-warmup.md)). Same conventions as the
+steps above; CI runs them in [`warmup-eshop.yml`](../.github/workflows/warmup-eshop.yml).
+
+| Step | Script | Needs | Produces |
+|---|---|---|---|
+| 1 | [`eshop/1-build-eshop.ps1`](eshop/1-build-eshop.ps1) | Windows, Visual Studio 2022 or Build Tools 2022 (web workload), git | `<work>\eshop-site` (published, `UseMockData=true`); `<work>\eshop-src`; `state\eshop-build.json` |
+| 2 | [`eshop/2-deploy-eshop.ps1`](eshop/2-deploy-eshop.ps1) | elevated, IIS (`3-install-iis-sql.ps1 -SkipSql`) | IIS site `eshop-legacy` on `http://localhost:8081/`; `state\eshop-deploy.json` |
+| 3 | [`eshop/3-record-eshop.ps1`](eshop/3-record-eshop.ps1) | elevated, `sk` | `<work>\eshop\traffic.skcap` through `sk capture` on `:8001`; `state\eshop-traffic.json` (scenarios, session ids, counts) |
+| 4 | [`eshop/4-replay-eshop.ps1`](eshop/4-replay-eshop.ps1) | elevated, `sk` | `<work>\eshop\run.skrun`: the A/A replay; `state\eshop-replay.json` |
+| 5 | [`eshop/5-scan-eshop.ps1`](eshop/5-scan-eshop.ps1) | Portcullis | `<work>\eshop\portcullis.sarif`; `state\eshop-scan.json` |
+| 6 | [`eshop/6-verdict-eshop.ps1`](eshop/6-verdict-eshop.ps1) | `sk`; Windows or Linux | `<work>\eshop\verdict.json`, `<work>\eshop\evidence\` (the pack); `state\eshop-verdict.json` |
+
+Not steps: [`eshop/Reset-EShop.ps1`](eshop/Reset-EShop.ps1) restarts the application pool
+and waits for the starting catalog (step 3 calls it before each scenario, `sk replay`
+before each scenario on each side); [`eshop/EShop.Scenarios.ps1`](eshop/EShop.Scenarios.ps1)
+holds the traffic.
+
 ## Conventions
 
 - Scripts run on Windows PowerShell 5.1 and PowerShell 7; CI runs them on 5.1.
 - ASCII only: Windows PowerShell 5.1 reads a script without a byte-order mark as ANSI.
 - Shared helpers live in [`lib/NopBench.Common.ps1`](lib/NopBench.Common.ps1), dot-sourced
-  by each script, so any script runs on its own.
+  by each script, so any script runs on its own. The steps that drive Second Key also
+  dot-source [`lib/NopBench.Chain.ps1`](lib/NopBench.Chain.ps1): the chain's tools, the
+  recording proxy's start and stop, scripted sessions (one cookie jar, every request tagged
+  with its scenario) and the fields of an HTML form as a browser would submit them.
+- Traffic goes through the recording proxy only, and a step that does not get the answer
+  its scenario needs fails the recording (`Invoke-BenchStep`).
 - Lint: `Invoke-ScriptAnalyzer -Path scripts -Recurse -Settings ./PSScriptAnalyzerSettings.psd1`
   (the `lint` job in CI runs exactly that).

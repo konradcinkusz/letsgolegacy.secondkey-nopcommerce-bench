@@ -1,0 +1,181 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/konradcinkusz/letsgolegacy.secondkey/967c49c0005c4412180914f43437d75b43f148dc/schemas/contract.schema.json
+#
+# The P3 warm-up contract: a small contract for eShopLegacyMVC's catalog manager, run on
+# its mock catalog (docs/adr/0004-chain-tools-and-eshop-warmup.md). Its job is to exercise
+# the chain, so it is deliberately small; each title says exactly what its assertions check.
+#
+# Scenarios (scripts/eshop/EShop.Scenarios.ps1): E01 browse, E02 missing items, E03
+# create, E04 invalid create, E05 edit item 2, E06 delete item 3, E07 brands Web API.
+# Sample data: 12 items, 5 brands (eShopLegacyMVC Models/Infrastructure/PreconfiguredData.cs).
+apiVersion: secondkey/v1
+kind: Contract
+metadata:
+  name: eshop-legacy-mvc-warmup
+  title: eShopLegacyMVC catalog manager (mock data) - P3 warm-up
+  system: eShopLegacyMVC at dotnet-architecture/eShopModernizing 63bc9ec
+  revision: 1
+  owners: [bench]
+
+compare:
+  headers: [content-type, location]
+  html: extracts
+
+extract:
+  - name: catalogNames
+    when: { method: GET, path: "^/$" }
+    from: html
+    selector: "table.table > tbody > tr > td:nth-child(2)"
+    all: true
+  - name: catalogPrices
+    when: { method: GET, path: "^/$" }
+    from: html
+    selector: "td.esh-table-price"
+    as: decimal
+    culture: en-US
+    all: true
+  - name: catalogTotal
+    when: { method: GET, path: "^/$" }
+    from: html
+    selector: "span.esh-pager-item"
+    regex: "of ([0-9]+) products"
+    as: integer
+  - name: itemName
+    when: { method: GET, path: "^/Catalog/Details/[0-9]+$" }
+    from: html
+    selector: "dl.dl-horizontal > dd:nth-of-type(1)"
+  - name: itemPrice
+    when: { method: GET, path: "^/Catalog/Details/[0-9]+$" }
+    from: html
+    selector: "dl.dl-horizontal > dd:nth-of-type(5)"
+    as: decimal
+    culture: en-US
+  - name: validationMessages
+    when: { method: POST, path: "^/Catalog/(Create|Edit/[0-9]+)$" }
+    from: html
+    selector: "span.field-validation-error"
+    all: true
+
+clauses:
+  # --- never ------------------------------------------------------------------------
+  - id: ESHOP-NEVER-SERVER-ERROR
+    kind: never
+    title: No request is answered with a status of 500 or above
+    why: A server error loses the catalog manager's work and says nothing they can act on.
+    assert:
+      - { select: response.status, op: gte, value: 500 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: ESHOP-ITEM-PAGE-NEVER-WITHOUT-PRICE
+    kind: never
+    title: An item page answered with 200 never lacks a price in its fifth field
+    why: A catalog manager who cannot see an item's price edits it blind.
+    when: { method: GET, path: "^/Catalog/Details/[0-9]+$" }
+    assert:
+      - { select: response.status, op: equals, value: 200 }
+      - { select: extract.itemPrice, op: absent }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: ESHOP-REFUSED-FORM-NEVER-SILENT
+    kind: never
+    title: A create or edit answered with 200 (the form again) never carries zero validation messages
+    why: A form handed back without a reason looks like a save that silently failed.
+    when: { method: POST, path: "^/Catalog/(Create|Edit/[0-9]+)$" }
+    assert:
+      - { select: response.status, op: equals, value: 200 }
+      - { select: extract.validationMessages, op: countEquals, value: 0 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  # --- must -------------------------------------------------------------------------
+  - id: ESHOP-LISTING-SHOWS-ITEMS-AND-TOTAL
+    kind: must
+    title: Every catalog page lists at least one item name and states a total of at least one product
+    why: An empty page or a missing total hides the catalog from the person managing it.
+    when: { method: GET, path: "^/$" }
+    assert:
+      - { select: extract.catalogNames, op: countAtLeast, value: 1 }
+      - { select: extract.catalogTotal, op: gte, value: 1 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: ESHOP-LISTED-PRICES-POSITIVE
+    kind: must
+    title: Every price in a catalog listing is greater than zero
+    why: A zero or negative price published from the catalog lets an item be sold for nothing.
+    when: { method: GET, path: "^/$" }
+    assert:
+      - { select: "extract.catalogPrices[*]", op: gt, value: 0 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: ESHOP-PAGE-SIZE-5
+    kind: must
+    title: A catalog page requested with pageSize=5 lists at most 5 items
+    why: Paging that returns more than it was asked for breaks every page after it.
+    when: { method: GET, path: "^/$", query: { pageSize: "^5$" } }
+    assert:
+      - { select: extract.catalogNames, op: countAtMost, value: 5 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: ESHOP-PAGE-SIZE-10
+    kind: must
+    title: A catalog page requested with pageSize=10 lists at most 10 items
+    why: Paging that returns more than it was asked for breaks every page after it.
+    when: { method: GET, path: "^/$", query: { pageSize: "^10$" } }
+    assert:
+      - { select: extract.catalogNames, op: countAtMost, value: 10 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: ESHOP-MISSING-ITEM-404
+    kind: must
+    title: The details, edit and delete pages of item 999, which does not exist, answer 404
+    why: A page for an item that does not exist must say so, not render an empty form someone might save.
+    when: { method: GET, path: "^/Catalog/(Details|Edit|Delete)/999$" }
+    assert:
+      - { select: response.status, op: equals, value: 404 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: ESHOP-DETAILS-WITHOUT-ID-400
+    kind: must
+    title: GET /Catalog/Details without an id answers 400
+    why: A details link without an id is a client error and must be reported as one.
+    when: { method: GET, path: "^/Catalog/Details$" }
+    assert:
+      - { select: response.status, op: equals, value: 400 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: ESHOP-EDIT-2-AND-DELETE-3-REDIRECT-TO-CATALOG
+    kind: must
+    title: POST /Catalog/Edit/2 and POST /Catalog/Delete/3 answer 302 with Location /
+    why: After a save the manager is taken back to the catalog; anywhere else leaves them unsure it happened.
+    when: { method: POST, path: "^/Catalog/(Edit/2|Delete/3)$" }
+    assert:
+      - { select: response.status, op: equals, value: 302 }
+      - { select: "response.headers.location[0]", op: equals, value: "/" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: ESHOP-PICTURE-IS-PNG
+    kind: must
+    title: An item picture answers 200 with a content type starting image/png
+    why: The catalog and the shop front show these pictures; any other type breaks them.
+    when: { method: GET, path: "^/items/[0-9]+/pic$" }
+    assert:
+      - { select: response.status, op: equals, value: 200 }
+      - { select: "response.headers.content-type[0]", op: matches, value: "^image/png" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: ESHOP-BRANDS-API-LISTS-5-INCLUDING-DOTNET
+    kind: must
+    title: GET /api/brands answers a JSON array of 5 brands, one of them named .NET
+    why: Clients of the Web API build their brand filters from this list.
+    when: { method: GET, path: "^/api/brands$" }
+    assert:
+      - { select: response.body.json, op: countEquals, value: 5 }
+      - { select: "response.body.json[*].Brand", op: equals, value: ".NET", quantifier: any }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: ESHOP-UNKNOWN-BRAND-404
+    kind: must
+    title: GET /api/brands/42, a brand that does not exist, answers 404
+    why: A client asking for a brand that is not there must be told so.
+    when: { method: GET, path: "^/api/brands/42$" }
+    assert:
+      - { select: response.status, op: equals, value: 404 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }

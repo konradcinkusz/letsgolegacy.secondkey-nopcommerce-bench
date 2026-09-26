@@ -1,0 +1,157 @@
+# P3: the warm-up - the whole Second Key chain on Microsoft's eShopModernizing
+# (eShopLegacyMVC on its mock data) before it is pointed at nopCommerce. Done when an
+# evidence pack is produced: the eshop-evidence-pack artifact.
+#
+#   tools    (ubuntu)   sk and Portcullis at their pinned commits      -> chain-tools
+#   legacy   (windows)  build, IIS, record (sk capture), A/A replay, gate scan
+#                                                                      -> eshop-recordings
+#   verdict  (ubuntu)   sk compare, sk gate, sk evidence - file in, file out
+#                                                                      -> eshop-evidence-pack
+#
+# The split is docs/TOPOLOGY.md's: only capture and replay need the running application,
+# so only they run on the Windows host. Every step calls a script under scripts/eshop/.
+name: warmup-eshop
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tools:
+    uses: ./.github/workflows/chain-tools.yml
+
+  legacy:
+    name: eShopLegacyMVC under IIS - record and replay A/A
+    needs: tools
+    runs-on: windows-2022
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - name: Check out the bench
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set the work root
+        run: |
+          [System.IO.File]::AppendAllText($env:GITHUB_ENV, "NOPBENCH_WORK=$env:RUNNER_TEMP\nopbench`n")
+
+      - name: Download the chain's tools
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: chain-tools
+          path: ${{ runner.temp }}\nopbench\tools\chain
+
+      - name: Set up the .NET runtime for the chain's tools
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
+
+      - name: Cache pinned NuGet downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}\nopbench\downloads
+          key: warmup-eshop-downloads-${{ hashFiles('pins.json') }}
+
+      - name: 1 - Fetch, build and publish eShopLegacyMVC
+        run: .\scripts\eshop\1-build-eshop.ps1
+
+      - name: IIS with ASP.NET 4.x (step 3 of the legacy runbook, IIS half)
+        run: .\scripts\3-install-iis-sql.ps1 -SkipSql
+
+      - name: 2 - Deploy to IIS
+        run: .\scripts\eshop\2-deploy-eshop.ps1
+
+      - name: 3 - Record the traffic through sk capture
+        run: .\scripts\eshop\3-record-eshop.ps1
+
+      - name: 4 - Replay A/A (sk replay)
+        run: .\scripts\eshop\4-replay-eshop.ps1
+
+      - name: 5 - Gate analyzers (Portcullis SARIF)
+        run: .\scripts\eshop\5-scan-eshop.ps1
+
+      - name: Upload the recording, the run and the SARIF
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: eshop-recordings
+          # Relative to the work root, so a download into another work root recreates eshop\
+          # and state\ as they were here.
+          path: |
+            ${{ runner.temp }}\nopbench\eshop
+            ${{ runner.temp }}\nopbench\state\eshop-*.json
+            ${{ runner.temp }}\nopbench\logs\eshop-capture.log*
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload MSBuild binary logs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: eshop-build-logs
+          path: ${{ runner.temp }}\nopbench\logs\*.binlog
+          if-no-files-found: ignore
+          retention-days: 7
+
+  verdict:
+    name: Verdict, gate and evidence pack (file in, file out)
+    needs: [tools, legacy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out the bench
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set the work root
+        run: |
+          [System.IO.File]::AppendAllText($env:GITHUB_ENV, "NOPBENCH_WORK=$env:RUNNER_TEMP/nopbench`n")
+
+      - name: Download the chain's tools
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: chain-tools
+          path: ${{ runner.temp }}/nopbench/tools/chain
+
+      - name: Download the recording, the run and the SARIF
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: eshop-recordings
+          path: ${{ runner.temp }}/nopbench
+
+      - name: Set up the .NET runtime for the chain's tools
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: 6 - Compare, gate and assemble the evidence pack
+        # The hosted image has Google Chrome, so the pack must carry its PDF.
+        run: ./scripts/eshop/6-verdict-eshop.ps1 -Pdf required
+
+      - name: Upload the evidence pack
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: eshop-evidence-pack
+          path: ${{ runner.temp }}/nopbench/eshop/evidence
+          if-no-files-found: error
+          retention-days: 30

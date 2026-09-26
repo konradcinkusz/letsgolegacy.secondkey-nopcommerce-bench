@@ -279,6 +279,30 @@ function Get-BenchPinnedPackage {
     return $folder
 }
 
+# --- IIS ----------------------------------------------------------------------------
+
+function Invoke-BenchAppCmd {
+    # appcmd.exe, which behaves the same under Windows PowerShell 5.1 and PowerShell 7
+    # (unlike the WebAdministration module). It reports "not found" through its exit code;
+    # callers that probe pass -AllowFailure and look at the output instead.
+    param([Parameter(Mandatory = $true)][string[]] $Arguments, [switch] $AllowFailure)
+    $appcmd = Join-Path $env:windir 'System32\inetsrv\appcmd.exe'
+    if (-not (Test-Path -LiteralPath $appcmd)) { throw 'IIS is not installed (no appcmd.exe). Run scripts\3-install-iis-sql.ps1 first.' }
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $output = & $appcmd @Arguments
+        $code = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previous
+    }
+    if ($code -ne 0 -and -not $AllowFailure) {
+        throw ('appcmd {0} failed ({1}): {2}' -f ($Arguments -join ' '), $code, ($output -join ' '))
+    }
+    return $output
+}
+
 # --- HTTP ---------------------------------------------------------------------------
 # System.Net.Http behaves the same on Windows PowerShell 5.1 and PowerShell 7, unlike
 # Invoke-WebRequest (redirect handling and error behaviour differ between the two).
@@ -300,30 +324,45 @@ function New-BenchHttpClient {
     return $client
 }
 
+function New-BenchFormFieldList {
+    # An ordered list of form fields. A list rather than a dictionary because a form may
+    # repeat a name (ASP.NET MVC renders a checkbox as the box plus a hidden "false").
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Creates an in-memory object; changes no system state.')]
+    param([System.Collections.IDictionary] $From)
+    $pairs = New-Object 'System.Collections.Generic.List[System.Collections.Generic.KeyValuePair[string,string]]'
+    if ($From) {
+        foreach ($key in $From.Keys) {
+            $pairs.Add((New-Object 'System.Collections.Generic.KeyValuePair[string,string]' -ArgumentList ([string] $key), ([string] $From[$key])))
+        }
+    }
+    return , $pairs
+}
+
 function Invoke-BenchHttp {
     # One request. Returns status, headers of interest, body and elapsed milliseconds;
-    # throws only on transport failure (connection refused, timeout).
+    # throws only on transport failure (connection refused, timeout). A POST sends -Form (a
+    # dictionary) or -FormPairs (New-BenchFormFieldList, Get-BenchForm) url-encoded.
     param(
         [Parameter(Mandatory = $true)] $Client,
         [Parameter(Mandatory = $true)][string] $Uri,
         [ValidateSet('GET', 'POST')][string] $Method = 'GET',
-        [System.Collections.IDictionary] $Form
+        [System.Collections.IDictionary] $Form,
+        $FormPairs,
+        [System.Collections.IDictionary] $Headers
     )
     if ($Method -eq 'POST') { $httpMethod = [System.Net.Http.HttpMethod]::Post } else { $httpMethod = [System.Net.Http.HttpMethod]::Get }
     $request = New-Object System.Net.Http.HttpRequestMessage($httpMethod, $Uri)
     if ($Method -eq 'POST') {
-        $pairs = New-Object 'System.Collections.Generic.List[System.Collections.Generic.KeyValuePair[string,string]]'
-        if ($Form) {
-            foreach ($key in $Form.Keys) {
-                $pairs.Add((New-Object 'System.Collections.Generic.KeyValuePair[string,string]' -ArgumentList ([string] $key), ([string] $Form[$key])))
-            }
-        }
+        if ($null -ne $FormPairs) { $pairs = $FormPairs } else { $pairs = New-BenchFormFieldList -From $Form }
         $request.Content = New-Object System.Net.Http.FormUrlEncodedContent -ArgumentList (, $pairs)
+    }
+    if ($Headers) {
+        foreach ($name in $Headers.Keys) { $null = $request.Headers.TryAddWithoutValidation([string] $name, [string] $Headers[$name]) }
     }
     $watch = [System.Diagnostics.Stopwatch]::StartNew()
     try {
         $response = $Client.SendAsync($request).GetAwaiter().GetResult()
-        $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+        $bytes = $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
     }
     finally {
         $request.Dispose()
@@ -331,12 +370,18 @@ function Invoke-BenchHttp {
     $location = $null
     if ($response.Headers.Location) { $location = $response.Headers.Location.ToString() }
     $contentType = $null
-    if ($response.Content.Headers.ContentType) { $contentType = $response.Content.Headers.ContentType.MediaType }
+    $encoding = [System.Text.Encoding]::UTF8
+    if ($response.Content.Headers.ContentType) {
+        $contentType = $response.Content.Headers.ContentType.MediaType
+        $charset = $response.Content.Headers.ContentType.CharSet
+        if ($charset) { try { $encoding = [System.Text.Encoding]::GetEncoding($charset.Trim('"')) } catch { $null = $_ } }
+    }
     $result = [pscustomobject]@{
         StatusCode  = [int] $response.StatusCode
         Location    = $location
         ContentType = $contentType
-        Body        = $body
+        Body        = $encoding.GetString($bytes)
+        Length      = $bytes.Length
         Ms          = [int] $watch.ElapsedMilliseconds
     }
     $response.Dispose()
