@@ -92,10 +92,15 @@ foreach ($mutant in @($catalog.mutants)) {
             regressions = [int] $o.regressions
             regressedClauses = @($o.regressedClauses | ForEach-Object { [string] $_ })
             uncoveredDifferences = [int] $o.uncoveredDifferences
-            intendedClausesRegressed = @($o.intendedClausesRegressed | ForEach-Object { [string] $_ })
+            intendedClauseStatus = $o.intendedClauseStatus
             otherRegressedClauses = @($o.otherRegressedClauses | ForEach-Object { [string] $_ })
+            regressionsByClause = [int] $o.regressionsByClause
             missingAnswers = [int] $o.missingAnswers
             fixCandidates = [int] $o.fixCandidates
+            exchanges = [int] $o.exchanges
+            scenarios = [int] $o.scenarios
+            regressedExchanges = @($o.regressedExchanges)
+            verdictSha256 = [string] $o.verdictSha256
             runUrl = [string] $o.runUrl
         })
 }
@@ -124,8 +129,14 @@ $document = [ordered]@{
     collectedAtUtc = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 }
 $null = New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Out)
-[System.IO.File]::WriteAllText($Out, (ConvertTo-Json -InputObject $document -Depth 10), (New-Object System.Text.UTF8Encoding($false)))
+$json = ConvertTo-Json -InputObject $document -Depth 10
+[System.IO.File]::WriteAllText($Out, $json, (New-Object System.Text.UTF8Encoding($false)))
 Write-BenchLog ('{0}; written to {1}' -f $headline, $Out)
+# The file in the log as well: the log outlives the artifact, and can be read where the
+# artifact cannot be downloaded.
+Enter-BenchGroup ('mutants.json (sha256 {0})' -f (Get-BenchSha256 $Out))
+Write-Host $json
+Exit-BenchGroup
 
 function Format-ClauseList {
     param([object[]] $Items)
