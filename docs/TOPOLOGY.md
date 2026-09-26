@@ -111,8 +111,7 @@ smoke test runs on PowerShell 7 on Linux as well.
    same Windows host. The legacy system is untouched: no code change, no
    recompilation, no IIS module.
 3. **Scripted traffic through the proxy, never around it.** The scenarios in
-   [`P4-TRAFFIC-PLAN.md`](P4-TRAFFIC-PLAN.md) (added by the next pull request in this
-   stack) drive the shop as a browser would —
+   [`P4-TRAFFIC-PLAN.md`](P4-TRAFFIC-PLAN.md) drive the shop as a browser would —
    cookies kept, anti-forgery tokens read from each form (the sample store enables
    them) — against `http://localhost:8000/`.
 4. **The proxy should forward the `Host` it received.** nopCommerce builds some links
