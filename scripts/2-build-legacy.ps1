@@ -140,6 +140,11 @@ foreach ($required in @('mscorlib.dll', 'System.Web.dll', 'RedistList\FrameworkL
     }
 }
 Write-BenchLog ('TargetFrameworkRootPath = {0}' -f $targetFrameworkRoot)
+# For the record: whether this machine has the targeting pack installed at all. On the
+# hosted images it does not, which is the whole reason for the package.
+$machinePack = Join-Path ${env:ProgramFiles(x86)} ('Reference Assemblies\Microsoft\Framework\.NETFramework\{0}' -f $nop.targetFrameworkVersion)
+if (Test-Path -LiteralPath (Join-Path $machinePack 'mscorlib.dll')) { $machinePackState = 'installed (not used)' } else { $machinePackState = 'not installed' }
+Write-BenchLog ('Machine-wide {0} targeting pack: {1}' -f $nop.targetFrameworkVersion, $machinePackState)
 Exit-BenchGroup
 Complete-Phase 'prepare'
 
@@ -178,6 +183,8 @@ $publishArguments = @(
     '/p:WebPublishMethod=FileSystem',
     ('/p:PublishUrl={0}' -f $SiteDir),
     '/p:DeleteExistingFiles=true',
+    # Publish files as built: no tokenised connection strings in any web.config.
+    '/p:AutoParameterizationWebConfigConnectionStrings=false',
     ('/bl:{0}' -f $publishLog)
 ) + $commonProperties
 Invoke-BenchNative -FilePath $msbuildExe -ArgumentList $publishArguments
@@ -260,8 +267,23 @@ Write-BenchState -WorkRoot $work -Name 'build' -Data ([ordered]@{
             nuget = $nugetVersion
             referenceAssemblies = ('{0} {1}' -f $refPackage.id, $refPackage.version)
             targetFrameworkRootPath = $targetFrameworkRoot
+            machineTargetingPack = $machinePackState
         }
         host = [ordered]@{ os = [System.Environment]::OSVersion.VersionString; image = ('{0} {1}' -f $env:ImageOS, $env:ImageVersion).Trim() }
         timingsSeconds = $timings
         builtAtUtc = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     })
+
+Add-BenchSummary -Lines @(
+    '### Legacy build',
+    '',
+    '| | |',
+    '|---|---|',
+    ('| nopCommerce | `{0}` at `{1}` |' -f $nop.tag, $nop.commit),
+    ('| MSBuild / nuget.exe | {0} / {1} |' -f $msbuildVersion, $nugetVersion),
+    ('| Reference assemblies | {0} {1} (machine-wide {2} pack: {3}) |' -f $refPackage.id, $refPackage.version, $nop.targetFrameworkVersion, $machinePackState),
+    ('| Published site | {0} files, {1:N1} MB, {2} plugins |' -f $sorted.Count, ($totalBytes / 1MB), $pluginFolders.Count),
+    ('| Manifest SHA-256 | `{0}` |' -f $siteDigest),
+    ('| Seconds | {0} |' -f (($timings.Keys | ForEach-Object { '{0} {1}' -f $_, $timings[$_] }) -join ', ')),
+    ''
+)

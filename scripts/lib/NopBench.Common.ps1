@@ -31,6 +31,14 @@ function Add-BenchSecretMask {
     if ($env:GITHUB_ACTIONS -eq 'true' -and $Value) { Write-Host ('::add-mask::{0}' -f $Value) }
 }
 
+function Add-BenchSummary {
+    # Appends Markdown lines to the GitHub Actions job summary. No-op outside Actions.
+    param([Parameter(Mandatory = $true)][string[]] $Lines)
+    if ($env:GITHUB_STEP_SUMMARY) {
+        [System.IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, (($Lines -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+    }
+}
+
 function Get-BenchFullPath {
     # Resolves a path relative to the current PowerShell location, whether or not it exists.
     param([Parameter(Mandatory = $true)][string] $Path)
