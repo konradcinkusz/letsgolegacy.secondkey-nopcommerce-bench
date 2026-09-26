@@ -17,8 +17,8 @@ is marked as human work.
 
 | ID | Deliverable | Done when | Status |
 |---|---|---|---|
-| P1 | Repository, pinned nopCommerce 3.x version, build on a Windows runner | CI builds it | planned |
-| P2 | Legacy under IIS (demo topology: one Windows host for the legacy side, Linux for the rest) with SQL Server and seed data | The shop answers at a URL | planned |
+| P1 | Repository, pinned nopCommerce 3.x version, build on a Windows runner | CI builds it | in review (#1) |
+| P2 | Legacy under IIS (demo topology: one Windows host for the legacy side, Linux for the rest) with SQL Server and seed data | The shop answers at a URL | in review (#2) |
 | P3 | Warm-up run of the chain on Microsoft's eShopModernizing | A pack is produced; after core S15 | planned |
 | P4 | nopCommerce traffic set (catalog, cart, discounts, taxes, shipping, checkout) recorded to `*.skcap` | The scenario count is recorded | planned |
 | P5 | nopCommerce contract: "must" and "never" rules, about 20% absence assertions | It validates and passes on the legacy system; after core S8 | planned |
@@ -27,6 +27,13 @@ is marked as human work.
 | P8 | Portcullis migration rules run on the candidate PR (R2, R3) | SARIF is attached to the pack | planned |
 | P9 | Publish the evidence pack, the contract and the numbers (scenarios, diffs, regressions, killed mutants) | Public and linked from both decks | planned |
 | P10 | Onboarding-hours log for P4–P7 | The hours are in the published report | planned |
+
+Prepared ahead of the tickets that use them (in review, #3):
+[`P4-TRAFFIC-PLAN.md`](P4-TRAFFIC-PLAN.md) — the scenario list and the must/never rules
+P5 will assert; [`P6-RUNBOOK.md`](P6-RUNBOOK.md) — the human steps of P6;
+[`P10-ONBOARDING-HOURS.md`](P10-ONBOARDING-HOURS.md) — the hours log.
+[`TOPOLOGY.md`](TOPOLOGY.md) records the demo topology (proposed decision D7), and
+[`adr/`](adr/) the decisions taken in P1 and P2.
 
 ## The "aha" moment the demo is built around
 
