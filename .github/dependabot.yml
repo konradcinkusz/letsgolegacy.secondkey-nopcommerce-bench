@@ -1,0 +1,11 @@
+version: 2
+updates:
+  # Every workflow pins its actions by commit SHA with the version in a comment;
+  # Dependabot moves both together. One weekly PR for all of them.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

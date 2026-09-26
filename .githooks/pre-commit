@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Blocks a commit whose staged changes contain a credential. Enabled per clone with
+#   git config core.hooksPath .githooks
+# Git for Windows runs it in its own bash, so it works on the Windows host too.
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks is not installed, so nothing was scanned." >&2
+  echo "pre-commit: install it (https://github.com/gitleaks/gitleaks/releases) — the CI job scans regardless." >&2
+  exit 1
+fi
+
+gitleaks protect --staged --redact --config "$REPO_ROOT/.gitleaks.toml" || {
+  cat >&2 <<'MSG'
+
+pre-commit: a staged change looks like a credential.
+
+If it IS one: unstage it and read it from the environment instead (P5).
+
+If it is NOT one (sample data that must look like a secret): add the path or shape to the
+[allowlist] in .gitleaks.toml in the same commit, so the exemption is reviewable.
+MSG
+  exit 1
+}

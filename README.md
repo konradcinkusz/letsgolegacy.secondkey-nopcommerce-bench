@@ -77,6 +77,20 @@ evidence pack, in [`warmup-eshop.yml`](.github/workflows/warmup-eshop.yml). The 
 tools, `sk` and Portcullis, are built from commits pinned in [`pins.json`](pins.json).
 What it does and how to run it: [`warmup/eshop/`](warmup/eshop/README.md).
 
+## Contributing
+
+Every clone enables the pre-commit secret scan once, before its first commit:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+It needs [gitleaks](https://github.com/gitleaks/gitleaks/releases) and refuses to commit
+without it; the same scan runs over the whole history on every push and pull request
+([`secret-scan.yml`](.github/workflows/secret-scan.yml)). Secrets reach the scripts only
+through environment variables, and a recording (`*.skcap`, `*.skrun`) of anything but the
+bench's own sample-data shop is never committed.
+
 ## Licence
 
 The bench (scripts, traffic, contract, results) is all rights reserved; see

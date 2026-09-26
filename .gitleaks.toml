@@ -1,0 +1,21 @@
+# Secret scanning runs as a pre-commit hook (.githooks/pre-commit) AND as a CI job
+# (.github/workflows/secret-scan.yml): the hook catches the mistake before it becomes
+# history, the job catches a clone that never enabled the hook.
+title = "letsgolegacy.secondkey-nopcommerce-bench"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "sqlserver-connection-string-with-password"
+description = "SQL Server connection string carrying an inline password"
+# The bench connects with Integrated Security (ADR 0003), so an inline password is never
+# legitimate here. The secret is the password itself (group 1), which is what the
+# allowlist below is matched against.
+regex = '''(?i)(?:server|data source)\s*=\s*[^\s;]+\s*;.{0,200}?(?:password|pwd)\s*=\s*([^\s;"']{4,})'''
+secretGroup = 1
+tags = ["database", "connection-string"]
+
+  [[rules.allowlists]]
+  description = "A placeholder in angle brackets names where the password comes from, e.g. <from NOPBENCH_SQL_PASSWORD>"
+  regexes = ['''^<''']

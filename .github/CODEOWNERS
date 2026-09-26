@@ -1,0 +1,8 @@
+# Every path, and the ones that decide what the bench proves named explicitly so the
+# intent survives edits.
+*                 @konradcinkusz
+/.github/         @konradcinkusz
+/.githooks/       @konradcinkusz
+/.gitleaks.toml   @konradcinkusz
+/contract/        @konradcinkusz
+/pins.json        @konradcinkusz
