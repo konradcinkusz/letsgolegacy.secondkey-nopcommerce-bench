@@ -278,3 +278,129 @@ function Get-BenchPinnedPackage {
     }
     return $folder
 }
+
+# --- HTTP ---------------------------------------------------------------------------
+# System.Net.Http behaves the same on Windows PowerShell 5.1 and PowerShell 7, unlike
+# Invoke-WebRequest (redirect handling and error behaviour differ between the two).
+
+function New-BenchHttpClient {
+    # A client that keeps cookies (the shop identifies a guest by cookie), never follows
+    # redirects on its own (the installer's success signal is a redirect) and sends a
+    # browser-like User-Agent (the shop treats known crawlers differently).
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Creates an in-memory object; changes no system state.')]
+    param([int] $TimeoutSeconds = 120)
+    try { Add-Type -AssemblyName System.Net.Http } catch { $null = $_ }
+    $handler = New-Object System.Net.Http.HttpClientHandler
+    $handler.AllowAutoRedirect = $false
+    $handler.UseCookies = $true
+    $handler.CookieContainer = New-Object System.Net.CookieContainer
+    $client = New-Object System.Net.Http.HttpClient($handler)
+    $client.Timeout = [TimeSpan]::FromSeconds($TimeoutSeconds)
+    $null = $client.DefaultRequestHeaders.TryAddWithoutValidation('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) nopbench/1.0')
+    return $client
+}
+
+function Invoke-BenchHttp {
+    # One request. Returns status, headers of interest, body and elapsed milliseconds;
+    # throws only on transport failure (connection refused, timeout).
+    param(
+        [Parameter(Mandatory = $true)] $Client,
+        [Parameter(Mandatory = $true)][string] $Uri,
+        [ValidateSet('GET', 'POST')][string] $Method = 'GET',
+        [System.Collections.IDictionary] $Form
+    )
+    if ($Method -eq 'POST') { $httpMethod = [System.Net.Http.HttpMethod]::Post } else { $httpMethod = [System.Net.Http.HttpMethod]::Get }
+    $request = New-Object System.Net.Http.HttpRequestMessage($httpMethod, $Uri)
+    if ($Method -eq 'POST') {
+        $pairs = New-Object 'System.Collections.Generic.List[System.Collections.Generic.KeyValuePair[string,string]]'
+        if ($Form) {
+            foreach ($key in $Form.Keys) {
+                $pairs.Add((New-Object 'System.Collections.Generic.KeyValuePair[string,string]' -ArgumentList ([string] $key), ([string] $Form[$key])))
+            }
+        }
+        $request.Content = New-Object System.Net.Http.FormUrlEncodedContent -ArgumentList (, $pairs)
+    }
+    $watch = [System.Diagnostics.Stopwatch]::StartNew()
+    try {
+        $response = $Client.SendAsync($request).GetAwaiter().GetResult()
+        $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+    }
+    finally {
+        $request.Dispose()
+    }
+    $location = $null
+    if ($response.Headers.Location) { $location = $response.Headers.Location.ToString() }
+    $contentType = $null
+    if ($response.Content.Headers.ContentType) { $contentType = $response.Content.Headers.ContentType.MediaType }
+    $result = [pscustomobject]@{
+        StatusCode  = [int] $response.StatusCode
+        Location    = $location
+        ContentType = $contentType
+        Body        = $body
+        Ms          = [int] $watch.ElapsedMilliseconds
+    }
+    $response.Dispose()
+    return $result
+}
+
+function Wait-BenchHttp {
+    # Polls $Uri until it answers with one of $ExpectStatus or the deadline passes. The
+    # first request to a cold ASP.NET site compiles views and loads plugins, so a single
+    # request can itself take minutes: the client timeout must be generous too.
+    param(
+        [Parameter(Mandatory = $true)] $Client,
+        [Parameter(Mandatory = $true)][string] $Uri,
+        [int[]] $ExpectStatus = @(200),
+        [int] $TimeoutSeconds = 600,
+        [int] $IntervalSeconds = 5
+    )
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $watch = [System.Diagnostics.Stopwatch]::StartNew()
+    $last = 'no response yet'
+    while ($true) {
+        try {
+            $response = Invoke-BenchHttp -Client $Client -Uri $Uri
+            if ($ExpectStatus -contains $response.StatusCode) {
+                Write-BenchLog ('{0} answered {1} after {2:N0} s' -f $Uri, $response.StatusCode, $watch.Elapsed.TotalSeconds)
+                return $response
+            }
+            $last = 'HTTP {0}' -f $response.StatusCode
+        }
+        catch {
+            $last = $_.Exception.GetBaseException().Message
+        }
+        if ((Get-Date) -ge $deadline) {
+            throw ('{0} did not answer {1} within {2} s (last: {3})' -f $Uri, ($ExpectStatus -join '/'), $TimeoutSeconds, $last)
+        }
+        Start-Sleep -Seconds $IntervalSeconds
+    }
+}
+
+# --- SQL Server ---------------------------------------------------------------------
+
+function Invoke-BenchSqlScalar {
+    # Runs one statement as the current Windows identity and returns the first column of
+    # the first row. Used for administration only (logins, drop/create checks).
+    param(
+        [Parameter(Mandatory = $true)][string] $Server,
+        [Parameter(Mandatory = $true)][string] $Query,
+        [string] $Database = 'master',
+        [int] $TimeoutSeconds = 120
+    )
+    $builder = New-Object System.Data.SqlClient.SqlConnectionStringBuilder
+    $builder['Data Source'] = $Server
+    $builder['Initial Catalog'] = $Database
+    $builder['Integrated Security'] = $true
+    $builder['Connect Timeout'] = 30
+    $connection = New-Object System.Data.SqlClient.SqlConnection($builder.ConnectionString)
+    try {
+        $connection.Open()
+        $command = $connection.CreateCommand()
+        $command.CommandText = $Query
+        $command.CommandTimeout = $TimeoutSeconds
+        return $command.ExecuteScalar()
+    }
+    finally {
+        $connection.Dispose()
+    }
+}
