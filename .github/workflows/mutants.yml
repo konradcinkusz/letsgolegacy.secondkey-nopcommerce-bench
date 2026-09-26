@@ -201,10 +201,16 @@ jobs:
         # Before step 7: the snapshot it takes must hold the mutant's database user.
         run: .\scripts\mutants\2-deploy-mutant.ps1 -Id $env:MUTANT_ID
 
+      # Steps 7 and 8 drive scripted traffic, about 3 and 6 minutes. A stalled step is
+      # stopped by its own time-out, which fails the step, so the diagnostics below still
+      # run; the job's time-out would cancel the job instead, and a cancelled job runs no
+      # failure() step.
       - name: 7 - Record the traffic set on the legacy shop (sk capture)
+        timeout-minutes: 20
         run: .\scripts\7-record-traffic.ps1
 
       - name: 8 - Replay the traffic set, legacy vs mutant (sk replay)
+        timeout-minutes: 25
         run: .\scripts\8-replay.ps1 -Candidate http://localhost:8091/
 
       - name: Upload the replay
