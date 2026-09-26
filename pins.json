@@ -1,0 +1,26 @@
+{
+  "_comment": "Single source of truth for everything the legacy side downloads. Every download is verified against these values before it is used. Changing a value is a decision: record the reason in docs/adr/.",
+  "nopCommerce": {
+    "repository": "https://github.com/nopSolutions/nopCommerce.git",
+    "tag": "release-3.90",
+    "commit": "12d1f0139149a9d6e84964d325d62bae6ac748f6",
+    "solution": "src/NopCommerce.sln",
+    "webProject": "src/Presentation/Nop.Web/Nop.Web.csproj",
+    "pluginsDirectory": "src/Plugins",
+    "targetFrameworkVersion": "v4.5.1"
+  },
+  "toolchain": {
+    "nuget": {
+      "id": "NuGet.CommandLine",
+      "version": "7.9.0",
+      "url": "https://api.nuget.org/v3-flatcontainer/nuget.commandline/7.9.0/nuget.commandline.7.9.0.nupkg",
+      "sha256": "fb2074e4427bbf8105f9a5c3df6dd77105fb82d696c0fc72fc25da903d1a63b2"
+    },
+    "referenceAssemblies": {
+      "id": "Microsoft.NETFramework.ReferenceAssemblies.net451",
+      "version": "1.0.3",
+      "url": "https://api.nuget.org/v3-flatcontainer/microsoft.netframework.referenceassemblies.net451/1.0.3/microsoft.netframework.referenceassemblies.net451.1.0.3.nupkg",
+      "sha256": "770b33dfa64dc430c9d9ba4e1438b920dee905f7ea60791147d70689f68692d3"
+    }
+  }
+}

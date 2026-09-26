@@ -1,0 +1,116 @@
+# P1: build the pinned nopCommerce 3.x on a Windows runner and publish the site as an
+# artifact. The steps call the numbered runbook scripts, so a person on a Windows machine
+# runs exactly what CI runs (scripts/README.md).
+name: legacy-build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: Windows image. windows-2022 is the supported one; windows-2025 exists to check portability.
+        type: choice
+        options: [windows-2022, windows-2025]
+        default: windows-2022
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # Windows PowerShell 5.1: the shell every Windows host already has. The scripts must
+    # run there, so CI proves they do.
+    shell: powershell
+
+jobs:
+  lint:
+    name: Lint scripts (PSScriptAnalyzer)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the bench
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: PSScriptAnalyzer (settings in PSScriptAnalyzerSettings.psd1)
+        shell: pwsh
+        run: |
+          $results = @(Invoke-ScriptAnalyzer -Path scripts -Recurse -Settings ./PSScriptAnalyzerSettings.psd1)
+          $results | Format-Table -AutoSize RuleName, Severity, ScriptName, Line, Message | Out-String -Width 240
+          if ($results.Count -gt 0) { throw "$($results.Count) PSScriptAnalyzer finding(s)" }
+
+      - name: Scripts are ASCII-only
+        # Windows PowerShell 5.1 reads a script without a byte-order mark as ANSI.
+        shell: bash
+        run: |
+          if grep -rnP '[^\x00-\x7F]' scripts; then
+            echo "::error::Non-ASCII characters in scripts/"
+            exit 1
+          fi
+
+  build:
+    name: Build nopCommerce (MSBuild, Release)
+    runs-on: ${{ inputs.runner || 'windows-2022' }}
+    timeout-minutes: 45
+    steps:
+      - name: Check out the bench
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set the work root
+        # Short and outside the checkout: the web publish pipeline nests paths deeply.
+        run: |
+          [System.IO.File]::AppendAllText($env:GITHUB_ENV, "NOPBENCH_WORK=$env:RUNNER_TEMP\nopbench`n")
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
+
+      - name: Add nuget.exe to PATH
+        uses: NuGet/setup-nuget@fd55a6f3b34392fa83fde1454582407d8c714123 # v4.0
+        with:
+          nuget-version: '7.9.0'
+
+      - name: Cache pinned NuGet downloads
+        # The reference assemblies package (and anything else pins.json names). Every file
+        # is re-verified against its pinned SHA-256 after restore, so a cache hit is never
+        # trusted blindly.
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}\nopbench\downloads
+          key: legacy-build-downloads-${{ hashFiles('pins.json') }}
+
+      - name: 1 - Fetch and verify the pinned nopCommerce
+        run: .\scripts\1-fetch-nopcommerce.ps1
+
+      - name: 2 - Restore, build and publish (Release)
+        run: .\scripts\2-build-legacy.ps1
+
+      - name: Upload the published site
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: legacy-site
+          # Uploaded relative to the work root, so a download into another work root
+          # recreates legacy-site\ and state\ (the hand-off files) as they were here.
+          path: |
+            ${{ runner.temp }}\nopbench\legacy-site
+            ${{ runner.temp }}\nopbench\state\build.json
+            ${{ runner.temp }}\nopbench\state\legacy-site.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload MSBuild binary logs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: legacy-build-logs
+          path: ${{ runner.temp }}\nopbench\logs
+          if-no-files-found: ignore
+          retention-days: 7
