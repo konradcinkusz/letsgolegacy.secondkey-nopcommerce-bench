@@ -33,7 +33,7 @@ function Add-BenchSecretMask {
 
 function Add-BenchSummary {
     # Appends Markdown lines to the GitHub Actions job summary. No-op outside Actions.
-    param([Parameter(Mandatory = $true)][string[]] $Lines)
+    param([Parameter(Mandatory = $true)][AllowEmptyString()][AllowEmptyCollection()][string[]] $Lines)
     if ($env:GITHUB_STEP_SUMMARY) {
         [System.IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, (($Lines -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
     }
