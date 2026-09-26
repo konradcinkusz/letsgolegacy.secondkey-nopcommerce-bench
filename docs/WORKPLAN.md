@@ -25,20 +25,22 @@ is marked as human work.
 | P6 | modernize-dotnet run on nopCommerce with the standards skill from R4 | The candidate builds and the existing tests pass — **human work: requires GitHub Copilot** | planned |
 | P7 | Replay and compare legacy vs candidate; diffs reviewed | `verdict.json` exists, and the NLS → ICU difference is found or its absence documented | planned |
 | P8 | Portcullis migration rules run on the candidate PR (R2, R3) | SARIF is attached to the pack | planned |
-| P9 | Publish the evidence pack, the contract and the numbers (scenarios, diffs, regressions, killed mutants) | Public and linked from both decks | planned |
+| P9 | Publish the evidence pack, the contract and the numbers (scenarios, diffs, regressions, killed mutants) | Public and linked from both decks | in progress: killed mutants done (#8), **11 of 11**. Open: the candidate's evidence pack, diffs and regressions (after P6–P8, none done yet), the links from both decks |
 | P10 | Onboarding-hours log for P4–P7 | The hours are in the published report | planned |
 
 What the tickets produced, as CI recorded it: [`results/p3`](../results/p3/README.md) — the
 warm-up's pack; [`results/p4`](../results/p4/README.md) — the nopCommerce traffic set,
 **38 scenarios, 290 exchanges**; [`results/p5`](../results/p5/README.md) — the contract's
-A/A verdict on the legacy shop, **pass: 76 of 76 clauses held**, 15 of them `never`.
+A/A verdict on the legacy shop, **pass: 76 of 76 clauses held**, 15 of them `never`;
+[`results/p9`](../results/p9/README.md) — the killed mutants of the set registered in
+[`P9-MUTANTS.md`](P9-MUTANTS.md), **11 of 11 killed**, M00 (the calibration) passing.
 
 Prepared ahead of the tickets that use them (#3):
 [`P4-TRAFFIC-PLAN.md`](P4-TRAFFIC-PLAN.md) — the scenario list and the must/never rules
 P5 will assert; [`P6-RUNBOOK.md`](P6-RUNBOOK.md) — the human steps of P6;
 [`P10-ONBOARDING-HOURS.md`](P10-ONBOARDING-HOURS.md) — the hours log.
 [`TOPOLOGY.md`](TOPOLOGY.md) records the demo topology (proposed decision D7), and
-[`adr/`](adr/) the decisions taken in P1–P5.
+[`adr/`](adr/) the decisions taken in P1–P5 and in P9's mutant part.
 
 ## The "aha" moment the demo is built around
 

@@ -27,8 +27,8 @@ contract catches defects. Killed means `sk compare`'s outcome is `fail`; a survi
 reported as one, and the contract is not changed to kill it here.
 
 The patches keep nopCommerce's CRLF line endings byte for byte (`.gitattributes`), are
-applied with whitespace tolerance, and fail loudly when they do not apply: step 1 of the
-workflow checks every patch against the pinned tree before any Windows runner starts.
+applied with whitespace tolerance, and fail loudly when they do not apply: the workflow's
+plan job checks every patch against the pinned tree before any mutant job starts.
 
 ### 2. Step 2 builds a mutant with `-Patch`
 
@@ -87,7 +87,8 @@ scripts or the workflow, and on demand; the A/A workflow is not changed.
 - Each mutant's evidence pack is a CI artifact (`mutant-<id>-evidence-pack`), like the A/A
   pack; the numbers are in [`results/p9`](../../results/p9/README.md).
 - A mutant job pays for a full legacy host (SQL Server Express, installer, configuration,
-  recording): about 20 minutes, in parallel.
+  recording): about 16 minutes (914–956 s in the run of `results/p9`), all of them in
+  parallel; the whole run took 18.5 minutes.
 - The traffic set is recorded anew in every mutant job, from that job's snapshot, so each
   replay compares data that both sides really started from.
 - `sk mutate` (C9, phase 02) replaces the hand-written set with generated mutants; the

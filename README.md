@@ -78,8 +78,8 @@ each aimed at named clauses and pre-registered before any of them ran
 is built, run as a second IIS site on the legacy shop's database and replayed against the
 legacy shop exactly as the migrated candidate will be; it is killed when `sk compare`
 answers `fail`. M00, the same code built twice, must pass, or the run does not count. CI:
-[`mutants.yml`](.github/workflows/mutants.yml); what a run showed:
-[`results/p9`](results/p9/README.md).
+[`mutants.yml`](.github/workflows/mutants.yml); what a run showed — **11 of 11 killed**,
+M00 passing: [`results/p9`](results/p9/README.md).
 
 ## Warm-up: the chain on eShopLegacyMVC (P3)
 
