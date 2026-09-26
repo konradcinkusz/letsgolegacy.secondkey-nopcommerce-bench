@@ -40,6 +40,20 @@ CI runs all five scripts on `windows-2022` runners
 site as the `legacy-site` artifact, and the next job deploys that artifact and runs the
 smoke test. Parameters, hand-off files and recipes: [`scripts/README.md`](scripts/README.md).
 
+## Record the traffic set (P4)
+
+With the chain's tools built ([`scripts/README.md`](scripts/README.md#the-chains-tools)), on the shop's host:
+
+```powershell
+.\scripts\6-configure-store.ps1    # taxes, shipping, discounts, catalog - through the admin UI
+.\scripts\7-record-traffic.ps1     # every scenario from one database snapshot, through sk capture
+```
+
+The scenarios are [`docs/P4-TRAFFIC-PLAN.md`](docs/P4-TRAFFIC-PLAN.md)'s, scripted in
+[`scripts/traffic/`](scripts/traffic/NopCommerce.Scenarios.ps1). CI runs both steps after
+the smoke test and uploads the recording as the `nopcommerce-traffic` artifact; what a
+run recorded is in [`results/p4`](results/p4/README.md).
+
 ## Warm-up: the chain on eShopLegacyMVC (P3)
 
 Before the chain meets nopCommerce it runs once, end to end, on Microsoft's sample legacy

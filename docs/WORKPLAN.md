@@ -28,6 +28,10 @@ is marked as human work.
 | P9 | Publish the evidence pack, the contract and the numbers (scenarios, diffs, regressions, killed mutants) | Public and linked from both decks | planned |
 | P10 | Onboarding-hours log for P4–P7 | The hours are in the published report | planned |
 
+What the tickets produced, as CI recorded it: [`results/p3`](../results/p3/README.md) — the
+warm-up's pack; [`results/p4`](../results/p4/README.md) — the nopCommerce traffic set,
+**38 scenarios, 290 exchanges**.
+
 Prepared ahead of the tickets that use them (in review, #3):
 [`P4-TRAFFIC-PLAN.md`](P4-TRAFFIC-PLAN.md) — the scenario list and the must/never rules
 P5 will assert; [`P6-RUNBOOK.md`](P6-RUNBOOK.md) — the human steps of P6;

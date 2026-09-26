@@ -449,3 +449,65 @@ function Invoke-BenchSqlScalar {
         $connection.Dispose()
     }
 }
+
+function New-BenchDatabaseSnapshot {
+    # A database snapshot of -Database named -Snapshot (default <Database>_snapshot), its
+    # sparse files next to the database's data files - unless that snapshot exists already.
+    # Snapshots exist in every SQL Server edition since 2016 SP1, Express included.
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Runbook helper: the calling step is the unit of confirmation.')]
+    param(
+        [Parameter(Mandatory = $true)][string] $Server,
+        [Parameter(Mandatory = $true)][ValidatePattern('^[A-Za-z0-9_]+$')][string] $Database,
+        [ValidatePattern('^[A-Za-z0-9_]*$')][string] $Snapshot
+    )
+    if (-not $Snapshot) { $Snapshot = '{0}_snapshot' -f $Database }
+    $query = @"
+IF EXISTS (SELECT 1 FROM sys.databases WHERE name = N'$Snapshot' AND source_database_id = DB_ID(N'$Database'))
+    SELECT N'reused';
+ELSE
+BEGIN
+    DECLARE @files nvarchar(max) = (
+        SELECT STRING_AGG(N'(NAME = ' + QUOTENAME(name) + N', FILENAME = N''' + REPLACE(LEFT(physical_name, LEN(physical_name) - CHARINDEX(N'\', REVERSE(physical_name)) + 1) + N'${Snapshot}_' + name + N'.ss', N'''', N'''''') + N''')', N', ')
+        FROM sys.master_files WHERE database_id = DB_ID(N'$Database') AND type = 0);
+    IF @files IS NULL THROW 50000, N'Database $Database was not found.', 1;
+    DECLARE @sql nvarchar(max) = N'CREATE DATABASE ' + QUOTENAME(N'$Snapshot') + N' ON ' + @files + N' AS SNAPSHOT OF ' + QUOTENAME(N'$Database');
+    EXEC (@sql);
+    SELECT N'created';
+END
+"@
+    $outcome = [string] (Invoke-BenchSqlScalar -Server $Server -Query $query -TimeoutSeconds 300)
+    return [pscustomobject]@{ Snapshot = $Snapshot; Outcome = $outcome }
+}
+
+function Restore-BenchDatabaseSnapshot {
+    # Reverts -Database to -Snapshot, as `sk replay`'s sqlServerSnapshot reset does, and returns
+    # the milliseconds it took. Open connections to the database - the shop's included - are
+    # rolled back and closed. Retried when another connection takes the single-user slot
+    # between the two statements.
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Runbook helper: the calling step is the unit of confirmation.')]
+    param(
+        [Parameter(Mandatory = $true)][string] $Server,
+        [Parameter(Mandatory = $true)][ValidatePattern('^[A-Za-z0-9_]+$')][string] $Database,
+        [Parameter(Mandatory = $true)][ValidatePattern('^[A-Za-z0-9_]+$')][string] $Snapshot,
+        [int] $Attempts = 3
+    )
+    $query = @"
+ALTER DATABASE [$Database] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+RESTORE DATABASE [$Database] FROM DATABASE_SNAPSHOT = N'$Snapshot';
+ALTER DATABASE [$Database] SET MULTI_USER;
+SELECT N'restored';
+"@
+    $watch = [System.Diagnostics.Stopwatch]::StartNew()
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        try {
+            $null = Invoke-BenchSqlScalar -Server $Server -Query $query -TimeoutSeconds 300
+            return [int] $watch.ElapsedMilliseconds
+        }
+        catch {
+            if ($attempt -eq $Attempts) { throw }
+            Write-BenchLog ('Restoring {0} from {1} failed ({2}); trying again.' -f $Database, $Snapshot, $_.Exception.GetBaseException().Message)
+            try { $null = Invoke-BenchSqlScalar -Server $Server -Query ("IF DB_ID(N'{0}') IS NOT NULL ALTER DATABASE [{0}] SET MULTI_USER;" -f $Database) } catch { $null = $_ }
+            Start-Sleep -Seconds 2
+        }
+    }
+}
