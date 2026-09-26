@@ -28,7 +28,7 @@ flowchart LR
         GEN["P4 traffic scripts"] --> PROXY["recording proxy, sk capture<br/>http://127.0.0.1:8000/"]
         PROXY --> IIS["IIS site nopcommerce-legacy (P2)<br/>http://localhost:8080/"]
         IIS --> SQL[("SQL Server 2022 Express .\SQLEXPRESS<br/>database nopcommerce_legacy<br/>+ snapshot nopcommerce_legacy_snapshot")]
-        REPLAY["replay, sk replay (planned, P7)"] --> IIS
+        REPLAY["replay, sk replay (A/A in P5; the candidate in P7)"] --> IIS
         REPLAY --> CAND["migrated candidate (planned, P7)<br/>http://localhost:8090/"]
     end
     subgraph LNX["Linux - CI: ubuntu runner / workstation: WSL2 or a Linux VM"]
@@ -73,6 +73,8 @@ legacy-build.yml
   tools (ubuntu-24.04)   chain-tools.yml: sk and Portcullis at their pinned commits -> chain-tools
   iis   (windows-2022)   needs build, tools: 3-install-iis-sql -> 4-deploy-and-install -> 5-smoke
                          -> 6-configure-store -> 7-record-traffic (sk capture) -> nopcommerce-traffic
+                         -> 8-replay (sk replay, A/A)                        -> nopcommerce-replay
+  verdict (ubuntu-24.04) needs tools, iis: 9-verdict (sk compare, sk evidence) -> nopcommerce-evidence-pack
 
 warmup-eshop.yml (P3)
   tools   (ubuntu-24.04)  chain-tools.yml: sk and Portcullis at their pinned commits -> chain-tools

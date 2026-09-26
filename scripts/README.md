@@ -13,6 +13,8 @@ by running the same step.
 | 5 | [`5-smoke.ps1`](5-smoke.ps1) | Any machine that reaches the shop (PowerShell 5.1 or 7, Windows or Linux) | Pass/fail per check; `state\smoke.json` |
 | 6 | [`6-configure-store.ps1`](6-configure-store.ps1) | After 4 (the administrator's credentials) | The store configured as [section 2 of the traffic plan](../docs/P4-TRAFFIC-PLAN.md#2-store-configuration-before-recording) needs it, through the admin UI, every change read back; schedule tasks disabled and the application restarted; `state\store-config.json` |
 | 7 | [`7-record-traffic.ps1`](7-record-traffic.ps1) | After 6, on the shop's host, `sk` | Database snapshot `nopcommerce_legacy_snapshot`; `<work>\traffic\nopcommerce.skcap` through `sk capture` on `:8000`, every scenario from the snapshot; `state\traffic.json` (scenarios, session ids, counts) |
+| 8 | [`8-replay.ps1`](8-replay.ps1) | After 7, on the shop's host, `sk` | `<work>\replay\run.skrun`: every scenario replayed on both sides with `sk replay`, the snapshot restored before each (A/A unless `-Candidate`); `state\replay.json` |
+| 9 | [`9-verdict.ps1`](9-verdict.ps1) | `sk`; any machine (Windows or Linux) | `<work>\replay\verdict.json` from `sk compare` against [`../contract/contract.yaml`](../contract/contract.yaml), and `<work>\replay\evidence\` (the pack); `state\verdict.json`. An A/A run must pass with every accepted clause held |
 
 Not a step: [`collect-diagnostics.ps1`](collect-diagnostics.ps1) gathers IIS, event log,
 SQL Server and nopCommerce logs into `<work>\diagnostics` after a failure (CI uploads it
@@ -35,6 +37,9 @@ From a PowerShell prompt (Windows PowerShell 5.1 or PowerShell 7) in the reposit
 # P4: the traffic set (needs the chain's tools, below)
 .\scripts\6-configure-store.ps1
 .\scripts\7-record-traffic.ps1
+# P5: the contract, proven on the legacy shop by an A/A replay
+.\scripts\8-replay.ps1
+.\scripts\9-verdict.ps1
 ```
 
 If script execution is blocked by policy, run each script with
@@ -76,6 +81,11 @@ Every value has a default; nothing is required.
 | `-Out` | 7 | `<work>\traffic\nopcommerce.skcap` | The recording. |
 | `-ProxyUrl` | 7 | `http://127.0.0.1:8000/` | Where the recording proxy listens. |
 | `-Only` | 7 | all | Scenario ids to record, for working on one scenario; such a recording is marked partial and is not the traffic set. |
+| `-Capture` | 8 | the recording in `state\traffic.json` | The `*.skcap` to replay. |
+| `-Candidate` | 8 | the legacy shop (A/A) | The other side's base URL (P7). |
+| `-Run`, `-OutDir` | 9 | `<work>\replay\run.skrun`, `<work>\replay` | The run to judge; where the verdict and the pack go. |
+| `-Pdf` | 9 | `auto` | `sk evidence --pdf`: `required` fails without a Chromium-based browser. |
+| `NOPBENCH_SK_SQL` | set by 8 for `sk` | built from `state\deploy.json` | The connection string of the snapshot reset ([`../contract/secondkey.yaml`](../contract/secondkey.yaml)); Windows authentication, no secret. |
 | `NOPBENCH_SK`, `NOPBENCH_PORTCULLIS` | steps that drive the chain | `<work>\tools\chain\secondkey\SecondKey.Cli.dll`, `<work>\tools\chain\portcullis\Portcullis.Cli.dll` | The chain's tools (below). |
 
 ## Hand-off files
@@ -94,6 +104,8 @@ then the default. You never have to remember where the last step put things.
 | `state\smoke.json` | step 5 | every check with status, time and result |
 | `state\store-config.json` | step 6 | what was configured, with the ids it got (tax category, countries, products, discounts, customer role) |
 | `state\traffic.json` | step 7 | the recording's path and digest, scenario list with session ids and request counts, snapshot, the answers to the first request after each restore, the site manifest digest |
+| `state\replay.json` | step 8 | the run's path and digest, mode (A/A or legacy vs candidate), both URLs, scenario, result and reset counts, statuses |
+| `state\verdict.json` | step 9 | outcome, summary counts, the clauses that did not hold, the pack's files |
 
 ## Recipes
 

@@ -1,0 +1,962 @@
+# The nopCommerce 3.90 contract (P5): what the legacy shop must do, and must never do, on
+# the P4 traffic set. The rules are docs/P4-TRAFFIC-PLAN.md section 5 (R01-R46); each
+# clause's `why` names the rules it states. A request a clause asserts a scenario-specific
+# fact on carries probe=<name> in its query (plan section 1): the contract language scopes
+# a clause by method, path and query, and every scenario uses the same URLs.
+#
+# Titles say exactly what the assertions check. Amounts are the shop's own, from the
+# store configuration of plan section 2. Validate: sk validate contract/contract.yaml
+apiVersion: secondkey/v1
+kind: Contract
+metadata:
+  name: nopcommerce-390
+  title: nopCommerce 3.90 sample shop - catalog, cart, discounts, taxes, shipping, checkout
+  system: nopCommerce release-3.90 (12d1f01), IIS, .NET Framework 4.8, SQL Server 2022 Express
+  revision: 1
+  owners: [bench]
+
+compare:
+  headers: [content-type, location]
+  html: extracts
+
+extract:
+  # --- Storefront pages ------------------------------------------------------------------
+  - name: footer
+    when: { method: GET, path: "^/(|notebooks|computers|desktops|search|lenovo-ideacentre-600-all-in-one-pc|apple-macbook-pro-13-inch|build-your-own-computer|25-virtual-gift-card)$" }
+    from: html
+    selector: ".footer-powered-by"
+  - name: homeProducts
+    when: { method: GET, path: "^/$" }
+    from: html
+    selector: ".home-page-product-grid .product-title a"
+    all: true
+  - name: listingProducts
+    when: { method: GET, path: "^/(notebooks|search)$" }
+    from: html
+    selector: ".product-grid .product-title a"
+    all: true
+  - name: subcategories
+    when: { method: GET, path: "^/computers$" }
+    from: html
+    selector: ".sub-category-grid .sub-category-item .title a"
+    all: true
+  - name: searchWarning
+    when: { method: GET, path: "^/search$" }
+    from: html
+    selector: ".search-results .warning"
+  - name: productName
+    when: { method: GET, path: "^/(lenovo-ideacentre-600-all-in-one-pc|apple-macbook-pro-13-inch|build-your-own-computer)$" }
+    from: html
+    selector: ".product-essential .product-name h1"
+  - name: productSku
+    when: { method: GET, path: "^/(lenovo-ideacentre-600-all-in-one-pc|apple-macbook-pro-13-inch|build-your-own-computer)$" }
+    from: html
+    selector: ".product-essential .sku .value"
+  - name: productPrice
+    when: { method: GET, path: "^/(lenovo-ideacentre-600-all-in-one-pc|apple-macbook-pro-13-inch|build-your-own-computer)$" }
+    from: html
+    selector: ".product-essential .product-price span[itemprop=price]"
+    attribute: content
+    as: decimal
+  - name: attributeOptions
+    when: { method: GET, path: "^/build-your-own-computer$" }
+    from: html
+    selector: ".product-essential .attributes dd option, .product-essential .attributes dd li label"
+    all: true
+
+  # --- The cart page (GET, and the answer to every POST of its form) ---------------------
+  - name: cartProducts
+    when: { path: "^/cart$" }
+    from: html
+    selector: ".order-summary-content table.cart .product-name"
+    all: true
+  - name: cartQuantities
+    when: { path: "^/cart$" }
+    from: html
+    selector: ".order-summary-content table.cart input.qty-input"
+    attribute: value
+    as: integer
+    all: true
+  - name: cartUnitPrices
+    when: { path: "^/cart$" }
+    from: html
+    selector: ".order-summary-content table.cart .product-unit-price"
+    as: decimal
+    culture: en-US
+    all: true
+  - name: cartUnitPriceTexts
+    when: { path: "^/cart$" }
+    from: html
+    selector: ".order-summary-content table.cart .product-unit-price"
+    all: true
+  - name: cartLineTotals
+    when: { path: "^/cart$" }
+    from: html
+    selector: ".order-summary-content table.cart .product-subtotal"
+    as: decimal
+    culture: en-US
+    all: true
+  - name: cartSubtotal
+    when: { path: "^/cart$" }
+    from: html
+    selector: "table.cart-total tr.order-subtotal .value-summary"
+    as: decimal
+    culture: en-US
+  - name: cartSubtotalDiscount
+    when: { path: "^/cart$" }
+    from: html
+    selector: "table.cart-total tr.order-subtotal-discount .value-summary"
+  - name: cartShipping
+    when: { path: "^/cart$" }
+    from: html
+    selector: "table.cart-total tr.shipping-cost .value-summary"
+    as: decimal
+    culture: en-US
+  - name: cartTax
+    when: { path: "^/cart$" }
+    from: html
+    selector: "table.cart-total tr.tax-value .value-summary"
+    as: decimal
+    culture: en-US
+  - name: cartTotalDiscount
+    when: { path: "^/cart$" }
+    from: html
+    selector: "table.cart-total tr.discount-total .value-summary"
+  - name: cartTotal
+    when: { path: "^/cart$" }
+    from: html
+    selector: "table.cart-total tr.order-total .value-summary"
+    as: decimal
+    culture: en-US
+  - name: couponMessages
+    when: { path: "^/cart$" }
+    from: html
+    selector: ".coupon-box .message-success, .coupon-box .message-failure"
+    all: true
+  - name: cartEmpty
+    when: { path: "^/cart$" }
+    from: html
+    selector: ".order-summary-content .no-data"
+
+  # --- Shipping --------------------------------------------------------------------------
+  - name: shippingEstimates
+    when: { method: POST, path: "^/cart/estimateshipping$" }
+    from: html
+    selector: ".shipping-results .option-name"
+    all: true
+  - name: checkoutGround
+    when: { method: POST, path: "^/checkout/OpcSaveBilling/$", query: { probe: "^T24$" } }
+    from: json
+    selector: update_section.html
+    regex: '>(Ground \(\$[0-9.,]+\))</label>'
+  - name: checkoutSecondDayAir
+    when: { method: POST, path: "^/checkout/OpcSaveBilling/$", query: { probe: "^T24$" } }
+    from: json
+    selector: update_section.html
+    regex: '>(2nd Day Air \(\$[0-9.,]+\))</label>'
+  - name: checkoutNextDayAir
+    when: { method: POST, path: "^/checkout/OpcSaveBilling/$", query: { probe: "^T24$" } }
+    from: json
+    selector: update_section.html
+    regex: '>(Next Day Air \(\$[0-9.,]+\))</label>'
+
+  # --- Orders ----------------------------------------------------------------------------
+  - name: placedOrderNumber
+    when: { method: GET, path: "^/checkout/completed/$" }
+    from: html
+    selector: ".order-completed .order-number strong"
+    regex: '([0-9]+)$'
+    as: integer
+  - name: orderNumber
+    when: { method: GET, path: "^/orderdetails/[0-9]+$" }
+    from: html
+    selector: ".order-overview .order-number strong"
+  - name: orderStatus
+    when: { method: GET, path: "^/orderdetails/[0-9]+$" }
+    from: html
+    selector: ".order-overview .order-status"
+  - name: orderTotals
+    when: { method: GET, path: "^/orderdetails/[0-9]+$" }
+    from: html
+    selector: ".order-details-page .section.totals table.cart-total tr"
+    all: true
+  - name: historyOrders
+    when: { method: GET, path: "^/order/history$" }
+    from: html
+    selector: ".order-list .order-item .title strong"
+    all: true
+  - name: registrationResult
+    when: { method: GET, path: "^/registerresult/1$" }
+    from: html
+    selector: ".registration-result-page .result"
+
+normalize:
+  masks:
+    patterns:
+      # A PDF invoice carries its creation time and a random document id; the bytes of two
+      # renderings never match. What the contract asserts about it is status and type.
+      - { name: pdf-bytes, regex: '^JVBERi0[A-Za-z0-9+/=]*$', replacement: '<pdf>' }
+      # The anti-forgery token MVC writes into a form is a fresh random value on every
+      # rendering. The order summary is such a form, and the one-page checkout sends it
+      # inside the JSON answer of its confirm step (update_section.html), which is compared
+      # as it is; only the token's value is masked, the rest of the section still counts.
+      - { name: anti-forgery-token, regex: '(?<=name="__RequestVerificationToken" type="hidden" value=")[^"]+', replacement: '<token>' }
+      # A cart line's picture - its URL, alt text and link title - is cached for three
+      # minutes by shopping-cart-item id (ShoppingCartModelFactory.PrepareCartItemPictureModel).
+      # Every scenario starts from the same snapshot, so every scenario's first cart line
+      # has the same id, and for up to three minutes a line shows the picture of whatever
+      # product last had that id - on either side. The mini cart in the add-to-cart answer
+      # and the confirm step's order summary are JSON, compared as they are, so the three
+      # values are masked there; the line's product name, price and quantity still count.
+      # Pages are compared through their extracts, and no extractor reads a picture.
+      - { name: cart-line-picture, regex: '(?<=\b(?:alt="Picture of |title="Show details for ))[^"]*|(?<=\bsrc=")[^"]*/content/images/thumbs/[^"]*', replacement: '<cached picture>' }
+
+clauses:
+  # === Catalog and search ================================================================
+  - id: STOREFRONT-ANSWERS-WITH-FOOTER
+    kind: must
+    title: The home, category, search and product pages the traffic opens answer 200 and show "Powered by nopCommerce"
+    why: R01. A storefront page that fails, or loses its layout, loses the visit; the footer is the layout's last element, so its presence says the page rendered to the end.
+    when: { method: GET, path: "^/(|notebooks|computers|desktops|search|lenovo-ideacentre-600-all-in-one-pc|apple-macbook-pro-13-inch|build-your-own-computer|25-virtual-gift-card)$" }
+    assert:
+      - { select: response.status, op: equals, value: 200 }
+      - { select: extract.footer, op: equals, value: "Powered by nopCommerce" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: HOME-LISTS-THE-FOUR-HOME-PAGE-PRODUCTS
+    kind: must
+    title: The home page lists exactly four products - Build your own computer, Apple MacBook Pro 13-inch, HTC One M8 Android L 5.0 Lollipop and $25 Virtual Gift Card, the four the sample data flags "show on home page"
+    why: R02. The home page is the shop window; a product missing from it, or one that should not be there, changes what customers buy.
+    when: { method: GET, path: "^/$" }
+    assert:
+      - { select: extract.homeProducts, op: countEquals, value: 4 }
+      - { select: extract.homeProducts, op: contains, value: "Build your own computer" }
+      - { select: extract.homeProducts, op: contains, value: "Apple MacBook Pro 13-inch" }
+      - { select: extract.homeProducts, op: contains, value: "HTC One M8 Android L 5.0 Lollipop" }
+      - { select: extract.homeProducts, op: contains, value: "$25 Virtual Gift Card" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: COMPUTERS-LISTS-ITS-SUBCATEGORIES
+    kind: must
+    title: The Computers category lists its three subcategories Desktops, Notebooks and Software
+    why: R01, plan T03. The category tree is how customers find products; a lost subcategory hides everything in it.
+    when: { method: GET, path: "^/computers$" }
+    assert:
+      - { select: extract.subcategories, op: countEquals, value: 3 }
+      - { select: extract.subcategories, op: contains, value: "Desktops" }
+      - { select: extract.subcategories, op: contains, value: "Notebooks" }
+      - { select: extract.subcategories, op: contains, value: "Software" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: NOTEBOOKS-BY-PRICE-ASCENDING
+    kind: must
+    title: Notebooks sorted by price (orderby=10) list HP Spectre, Lenovo Thinkpad X1, Asus N551JK, Samsung Series 9, Apple MacBook Pro - $1,350 to $1,800
+    why: R03. "Price low to high" that is not in price order misleads every customer who uses it.
+    when: { method: GET, path: "^/notebooks$", query: { orderby: "^10$" } }
+    assert:
+      - { select: extract.listingProducts, op: equals, value: ["HP Spectre XT Pro UltraBook", "Lenovo Thinkpad X1 Carbon Laptop", "Asus N551JK-XO076H Laptop", "Samsung Series 9 NP900X4C Premium Ultrabook", "Apple MacBook Pro 13-inch"] }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: NOTEBOOKS-BY-NAME
+    kind: must
+    title: Notebooks sorted by name (orderby=5) list Apple, Asus, HP Spectre, Lenovo, Samsung in that order
+    why: R03. Name order comes from the database collation today; a migration that sorts in memory can change it.
+    when: { method: GET, path: "^/notebooks$", query: { orderby: "^5$" } }
+    assert:
+      - { select: extract.listingProducts, op: equals, value: ["Apple MacBook Pro 13-inch", "Asus N551JK-XO076H Laptop", "HP Spectre XT Pro UltraBook", "Lenovo Thinkpad X1 Carbon Laptop", "Samsung Series 9 NP900X4C Premium Ultrabook"] }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: NOTEBOOKS-PAGE-TWO-OF-THREE-PER-PAGE
+    kind: must
+    title: Page 2 of the notebooks at 3 per page lists Lenovo Thinkpad X1 Carbon Laptop and Samsung Series 9 NP900X4C Premium Ultrabook
+    why: R04. Five published notebooks at three per page leave the last two for page two; paging that loses or repeats products hides them.
+    when: { method: GET, path: "^/notebooks$", query: { pagesize: "^3$", pagenumber: "^2$" } }
+    assert:
+      - { select: extract.listingProducts, op: equals, value: ["Lenovo Thinkpad X1 Carbon Laptop", "Samsung Series 9 NP900X4C Premium Ultrabook"] }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: UNPUBLISHED-NEVER-LISTED
+    kind: never
+    title: The unpublished HP Envy 6-1180ca is never among the products a notebooks listing or a search lists
+    why: R05. An unpublished product can be withdrawn for a reason - a recall, a wrong price; listing it sells what the shop took down.
+    when: { method: GET, path: "^/(notebooks|search)$" }
+    assert:
+      - { select: extract.listingProducts, op: contains, value: "HP Envy 6-1180ca 15.6-Inch Sleekbook" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: UNPUBLISHED-PAGE-NEVER-SERVED
+    kind: never
+    title: The unpublished HP Envy 6-1180ca's product page is never answered 200
+    why: R05. With unpublished product pages closed (plan section 2), serving the page lets a customer buy a withdrawn product from an old link.
+    when: { method: GET, path: "^/hp-envy-6-1180ca-156-inch-sleekbook$" }
+    assert:
+      - { select: response.status, op: equals, value: 200 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: UNPUBLISHED-PAGE-NOT-FOUND
+    kind: must
+    title: The unpublished HP Envy 6-1180ca's product page answers 404
+    why: R05's positive twin - the never clause needs the request answered, and the answer is "not found", as for a product that does not exist.
+    when: { method: GET, path: "^/hp-envy-6-1180ca-156-inch-sleekbook$" }
+    assert:
+      - { select: response.status, op: equals, value: 404 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: LENOVO-PAGE-NAME-SKU-PRICE
+    kind: must
+    title: The Lenovo IdeaCentre 600 page shows its name, SKU LE_IC_600 and price 500.00
+    why: R06. The product page is where the price is promised; a wrong name, SKU or price is a mis-sale.
+    when: { method: GET, path: "^/lenovo-ideacentre-600-all-in-one-pc$" }
+    assert:
+      - { select: extract.productName, op: equals, value: "Lenovo IdeaCentre 600 All-in-One PC" }
+      - { select: extract.productSku, op: equals, value: "LE_IC_600" }
+      - { select: extract.productPrice, op: equals, value: 500 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: MACBOOK-PAGE-NAME-SKU-PRICE
+    kind: must
+    title: The Apple MacBook Pro 13-inch page shows its name, SKU AP_MBP_13 and price 1800.00
+    why: R06. The product page is where the price is promised; a wrong name, SKU or price is a mis-sale.
+    when: { method: GET, path: "^/apple-macbook-pro-13-inch$" }
+    assert:
+      - { select: extract.productName, op: equals, value: "Apple MacBook Pro 13-inch" }
+      - { select: extract.productSku, op: equals, value: "AP_MBP_13" }
+      - { select: extract.productPrice, op: equals, value: 1800 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: COMPUTER-PAGE-ATTRIBUTE-ADJUSTMENTS
+    kind: must
+    title: The Build your own computer page shows price 1200.00 and the options "2.5 GHz Intel Pentium Dual-Core E2200 [+$15.00]" and "400 GB [+$100.00]"
+    why: R06, plan T04. Attribute price adjustments shown on the page are what the customer agrees to pay for each option.
+    when: { method: GET, path: "^/build-your-own-computer$" }
+    assert:
+      - { select: extract.productPrice, op: equals, value: 1200 }
+      - { select: extract.attributeOptions, op: contains, value: "2.5 GHz Intel Pentium Dual-Core E2200 [+$15.00]" }
+      - { select: extract.attributeOptions, op: contains, value: "400 GB [+$100.00]" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: SEARCH-FINDS-MACBOOK-BY-NAME-CASE-AND-SKU
+    kind: must
+    title: Searching apple, APPLE, " apple " or the SKU AP_MBP_13 lists Apple MacBook Pro 13-inch
+    why: R07. Search that depends on letter case, stray spaces or ignores the SKU loses the customers who type it that way.
+    when: { method: GET, path: "^/search$", query: { q: "^(\\s|%20)*(apple|APPLE|AP_MBP_13)(\\s|%20)*$" } }
+    assert:
+      - { select: extract.listingProducts, op: contains, value: "Apple MacBook Pro 13-inch" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: SEARCH-TERM-MINIMUM-LENGTH
+    kind: must
+    title: Searching "ap" answers "Search term minimum length is 3 characters" and lists no product
+    why: R08. The minimum length protects the database from two-letter scans and tells the customer why nothing was found.
+    when: { method: GET, path: "^/search$", query: { q: "^ap$" } }
+    assert:
+      - { select: extract.searchWarning, op: equals, value: "Search term minimum length is 3 characters" }
+      - { select: extract.listingProducts, op: countEquals, value: 0 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  # === Cart ==============================================================================
+  - id: LISTING-ADD-TO-CART-SUCCEEDS
+    kind: must
+    title: Every add-to-cart from a listing button answers "success":true
+    why: R09. The listing's add-to-cart button is the shortest path to a sale; a refusal there is a lost order.
+    when: { method: POST, path: "^/addproducttocart/catalog/" }
+    assert:
+      - { select: response.body.json.success, op: equals, value: true }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: T07-CART-HOLDS-ONE-LENOVO
+    kind: must
+    title: After a refused add of 5 more, the T07 cart still holds exactly one line, one Lenovo IdeaCentre 600
+    why: R09, R10. A refused add must leave the cart as it was.
+    when: { method: GET, path: "^/cart$", query: { probe: "^T07$" } }
+    assert:
+      - { select: extract.cartProducts, op: equals, value: ["Lenovo IdeaCentre 600 All-in-One PC"] }
+      - { select: extract.cartQuantities, op: equals, value: [1] }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: QUANTITY-ABOVE-STOCK-REFUSED
+    kind: must
+    title: Adding 5 Lenovos to a cart holding 1, with 3 in stock, answers "success":false with "Your quantity exceeds stock on hand. The maximum quantity that can be added is 3."
+    why: R10. Without backorders the shop must not sell stock it does not have.
+    when: { method: POST, path: "^/addproducttocart/details/3/1$", query: { probe: "^T07$" } }
+    assert:
+      - { select: response.body.json.success, op: equals, value: false }
+      - { select: response.body.json.message, op: contains, value: "Your quantity exceeds stock on hand. The maximum quantity that can be added is 3." }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: QUANTITY-BELOW-MINIMUM-REFUSED
+    kind: must
+    title: Adding 1 MacBook answers "success":false with "The minimum quantity allowed for purchase is 2."
+    why: R11. The minimum order quantity is a commercial term of the product; selling below it breaks it.
+    when: { method: POST, path: "^/addproducttocart/details/4/1$", query: { probe: "^T08$" } }
+    assert:
+      - { select: response.body.json.success, op: equals, value: false }
+      - { select: response.body.json.message, op: contains, value: "The minimum quantity allowed for purchase is 2." }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: REQUIRED-ATTRIBUTE-REFUSED
+    kind: must
+    title: Adding Build your own computer without an HDD answers "success":false with "Please select HDD"
+    why: R12. A configurable product without a required option cannot be built or priced.
+    when: { method: POST, path: "^/addproducttocart/details/1/1$", query: { probe: "^T09$" } }
+    assert:
+      - { select: response.body.json.success, op: equals, value: false }
+      - { select: response.body.json.message, op: contains, value: "Please select HDD" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: T09-ATTRIBUTES-PRICED-INTO-UNIT-PRICE
+    kind: must
+    title: The T09 cart prices the configured computer at 1435.00 (1200 + 15 + 20 + 100 + 50 + 50), one line, subtotal 1435.00
+    why: R13. Attribute adjustments must reach the unit price the customer pays.
+    when: { method: GET, path: "^/cart$", query: { probe: "^T09$" } }
+    assert:
+      - { select: extract.cartUnitPrices, op: equals, value: [1435] }
+      - { select: extract.cartLineTotals, op: equals, value: [1435] }
+      - { select: extract.cartSubtotal, op: equals, value: 1435 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: T10-QUANTITY-UPDATE-REPRICES
+    kind: must
+    title: Setting the Lenovo line to 3 shows quantities 3 and 1, line totals 1500.00 and 24.00 and subtotal 1524.00
+    why: R13. A line total is unit price times quantity and the subtotal their sum; anything else charges the wrong amount.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T10-quantity$" } }
+    assert:
+      - { select: extract.cartQuantities, op: equals, value: [3, 1] }
+      - { select: extract.cartLineTotals, op: equals, value: [1500, 24] }
+      - { select: extract.cartSubtotal, op: equals, value: 1524 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: T10-REMOVE-CHECKBOX-DELETES-LINE
+    kind: must
+    title: Ticking "remove" on the book leaves the cart with the Lenovo line only
+    why: R14. A customer who removes an item must not be charged for it.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T10-remove$" } }
+    assert:
+      - { select: extract.cartProducts, op: equals, value: ["Lenovo IdeaCentre 600 All-in-One PC"] }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: T10-QUANTITY-ZERO-EMPTIES-CART
+    kind: must
+    title: Setting the last line to quantity 0 answers "Your Shopping Cart is empty!" with no line
+    why: R14. Quantity 0 removes the line; keeping it would put a zero-quantity item into the order.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T10-zero$" } }
+    assert:
+      - { select: extract.cartEmpty, op: equals, value: "Your Shopping Cart is empty!" }
+      - { select: extract.cartProducts, op: countEquals, value: 0 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: CART-UNIT-PRICES-WRITTEN-IN-USD
+    kind: must
+    title: Every unit price on a cart page is written as $#,##0.00
+    why: R46. Prices are shown in US dollars with the en-US pattern; another pattern is another price to a customer.
+    when: { method: GET, path: "^/cart$", query: { probe: "^(T07|T09)$" } }
+    assert:
+      - { select: "extract.cartUnitPriceTexts[*]", op: matches, value: "^\\$[0-9]{1,3}(,[0-9]{3})*\\.[0-9]{2}$" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  # === Discounts =========================================================================
+  - id: SAVE10-TAKES-10-PERCENT-OF-SUBTOTAL
+    kind: must
+    title: SAVE10 on the $1,000.00 cart answers "The coupon code was applied" and shows the subtotal discount as ($100.00)
+    why: R15, R27. A percentage coupon must take exactly its percentage; how a discount is written - here in parentheses - is what the customer reads as a deduction.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T11$" } }
+    assert:
+      - { select: extract.couponMessages, op: equals, value: ["The coupon code was applied"] }
+      - { select: extract.cartSubtotal, op: equals, value: 1000 }
+      - { select: extract.cartSubtotalDiscount, op: equals, value: "($100.00)" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: COUPON-TRIMMED-AND-CASE-INSENSITIVE
+    kind: must
+    title: '" save10 " (spaces, lower case) answers "The coupon code was applied" and shows the subtotal discount ($100.00)'
+    why: R17. Customers type coupons as they read them; refusing a valid code for its case or a stray space loses the sale it was meant to win.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T12$" } }
+    assert:
+      - { select: extract.couponMessages, op: equals, value: ["The coupon code was applied"] }
+      - { select: extract.cartSubtotalDiscount, op: equals, value: "($100.00)" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: COUPON-WITH-U180E-REFUSED
+    kind: must
+    title: SAVE10 followed by U+180E (Mongolian vowel separator) is answered "The coupon code you entered couldn't be applied to your order", with no discount
+    why: Plan section 6, coupon trimming. U+180E is white space only in older Unicode data; whether String.Trim removes it depends on the runtime, so a migration can turn this refusal into a discount.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T12B$" } }
+    assert:
+      - { select: extract.couponMessages, op: equals, value: ["The coupon code you entered couldn't be applied to your order"] }
+      - { select: extract.cartSubtotalDiscount, op: absent }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: EXPIRED-COUPON-MESSAGE
+    kind: must
+    title: The expired sample coupon 456 answers "Sorry, this offer is expired"
+    why: R18. The customer is owed the reason a code does not work.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T13-expired$" } }
+    assert:
+      - { select: extract.couponMessages, op: equals, value: ["Sorry, this offer is expired"] }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: FUTURE-COUPON-MESSAGE
+    kind: must
+    title: FUTURE10 (valid from 2099) answers "Sorry, this offer is not started yet"
+    why: R18. The customer is owed the reason a code does not work.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T13-future$" } }
+    assert:
+      - { select: extract.couponMessages, op: equals, value: ["Sorry, this offer is not started yet"] }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: UNKNOWN-COUPON-MESSAGE
+    kind: must
+    title: The unknown code NOSUCH answers "The coupon code you entered couldn't be applied to your order"
+    why: R18. The customer is owed the reason a code does not work.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T13-unknown$" } }
+    assert:
+      - { select: extract.couponMessages, op: equals, value: ["The coupon code you entered couldn't be applied to your order"] }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: REFUSED-COUPON-NEVER-DISCOUNTS
+    kind: never
+    title: After the expired, the not-yet-started or the unknown coupon, the cart never shows a subtotal discount
+    why: R19. A discount outside its dates is money the shop never agreed to give.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T13-" } }
+    assert:
+      - { select: extract.cartSubtotalDiscount, op: exists }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: REFUSED-COUPON-NEVER-SAYS-APPLIED
+    kind: never
+    title: The expired, the not-yet-started and the unknown coupon are never answered "The coupon code was applied"
+    why: R18, R19. Telling a customer a code worked when it did not is a promise the order total will break.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T13-" } }
+    assert:
+      - { select: extract.couponMessages, op: contains, value: "The coupon code was applied" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: TAKE50-CAPPED-AT-ORDER-TOTAL
+    kind: must
+    title: TAKE50 on the $34.00 order ($24.00 book, $10.00 shipping, $0.00 tax) shows the order discount ($34.00) and total 0.00
+    why: R20. A fixed discount larger than the order is capped at the order; the customer pays nothing, and is paid nothing.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T14$" } }
+    assert:
+      - { select: extract.cartSubtotal, op: equals, value: 24 }
+      - { select: extract.cartShipping, op: equals, value: 10 }
+      - { select: extract.cartTax, op: equals, value: 0 }
+      - { select: extract.cartTotalDiscount, op: equals, value: "($34.00)" }
+      - { select: extract.cartTotal, op: equals, value: 0 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: CART-TOTAL-NEVER-NEGATIVE
+    kind: never
+    title: A cart page's order total is never below 0.00
+    why: R20. A negative total means the shop pays the customer to take goods.
+    when: { path: "^/cart$" }
+    assert:
+      - { select: extract.cartTotal, op: lt, value: 0 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: PCT20MAX100-STOPS-AT-MAXIMUM
+    kind: must
+    title: PCT20MAX100 on the $3,600.00 cart shows the subtotal discount ($100.00), not 20%
+    why: R21. A maximum discount amount caps a percentage coupon; without it the coupon gives away $720.00.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T15$" } }
+    assert:
+      - { select: extract.cartSubtotal, op: equals, value: 3600 }
+      - { select: extract.cartSubtotalDiscount, op: equals, value: "($100.00)" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: SHIPFREE-ZEROES-SHIPPING
+    kind: must
+    title: SHIPFREE on the $500.00 cart with Ground chosen shows shipping 0.00
+    why: R22. A shipping coupon must take the shipping cost it promises, and only that.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T16$" } }
+    assert:
+      - { select: extract.cartSubtotal, op: equals, value: 500 }
+      - { select: extract.cartShipping, op: equals, value: 0 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: GIFT-CARD-IN-CART-COUPON-MESSAGE
+    kind: must
+    title: SAVE10 on a cart holding a gift card answers "Sorry, this discount cannot be used with gift cards in the cart"
+    why: R23. The customer is owed the reason; the rule itself is the never clause below.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T17$" } }
+    assert:
+      - { select: extract.couponMessages, op: equals, value: ["Sorry, this discount cannot be used with gift cards in the cart"] }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: GIFT-CARD-CART-NEVER-DISCOUNTED
+    kind: never
+    title: A cart holding a gift card never shows a subtotal discount after SAVE10
+    why: R23. A discounted gift card is money bought below face value - the "free money" loop the rule closes.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T17$" } }
+    assert:
+      - { select: extract.cartSubtotalDiscount, op: exists }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: MEMBERS15-NEVER-FOR-A-GUEST
+    kind: never
+    title: A guest's cart never shows a subtotal discount after MEMBERS15 (Registered role only)
+    why: R24. A members-only price given to anyone is a price the shop did not set.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T18A$" } }
+    assert:
+      - { select: extract.cartSubtotalDiscount, op: exists }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: MEMBERS15-GUEST-NEVER-TOLD-APPLIED
+    kind: never
+    title: A guest applying MEMBERS15 is never answered "The coupon code was applied"
+    why: R24. A guest told a members-only coupon worked expects a price the checkout will not give.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T18A$" } }
+    assert:
+      - { select: extract.couponMessages, op: contains, value: "The coupon code was applied" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: MEMBERS15-GUEST-GETS-AN-EMPTY-MESSAGE
+    kind: must
+    title: A guest applying MEMBERS15 is answered with exactly one coupon message, and it is empty
+    why: R24, plan section 4a. The customer-role rule refuses without a message of its own, and 3.90 shows that missing message as an empty failure box - legacy behaviour a migration may change, and should do so on purpose.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T18A$" } }
+    assert:
+      - { select: extract.couponMessages, op: equals, value: [""] }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: MEMBERS15-FOR-A-REGISTERED-CUSTOMER
+    kind: must
+    title: MEMBERS15 for the registered sample customer answers "The coupon code was applied" and shows the subtotal discount ($75.00)
+    why: R24's positive twin. Without it the never clause could hold because the coupon never works for anyone.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T18B$" } }
+    assert:
+      - { select: extract.couponMessages, op: equals, value: ["The coupon code was applied"] }
+      - { select: extract.cartSubtotalDiscount, op: equals, value: "($75.00)" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: ONCE5-REFUSED-THE-SECOND-TIME
+    kind: must
+    title: ONCE5, once used in a placed order, answers "Sorry, you've used this discount already" the second time
+    why: R25. A once-per-customer coupon that works twice doubles its cost.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T19$" } }
+    assert:
+      - { select: extract.couponMessages, op: equals, value: ["Sorry, you've used this discount already"] }
+      - { select: extract.cartTotalDiscount, op: absent }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: COUPON-123-APPLIED-CHANGES-NOTHING
+    kind: must
+    title: The sample coupon 123 answers "The coupon code was applied" and the $500.00 cart shows no discount
+    why: R26. A discount assigned to no product applies to nothing; showing it applied is legacy behaviour a migration must keep or decide to change.
+    when: { method: POST, path: "^/cart$", query: { probe: "^T20$" } }
+    assert:
+      - { select: extract.couponMessages, op: equals, value: ["The coupon code was applied"] }
+      - { select: extract.cartSubtotal, op: equals, value: 500 }
+      - { select: extract.cartSubtotalDiscount, op: absent }
+      - { select: extract.cartTotalDiscount, op: absent }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  # === Taxes =============================================================================
+  - id: TAX-US-NY-10001
+    kind: must
+    title: Billed to US / New York / 10001, the $500.00 Lenovo with Ground shows tax 45.00 (9%)
+    why: R28. The exact-zip rate is the one the shop is liable for at that address.
+    when: { method: GET, path: "^/cart$", query: { probe: "^T21$" } }
+    assert:
+      - { select: extract.cartSubtotal, op: equals, value: 500 }
+      - { select: extract.cartShipping, op: equals, value: 10 }
+      - { select: extract.cartTax, op: equals, value: 45 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: TAX-US-NY-ANY-ZIP
+    kind: must
+    title: Billed to US / New York / 10002, the $500.00 Lenovo shows tax 44.38 (8.875%, rounded)
+    why: R28. The state rate applies where no zip rate matches; the rounding is part of the amount charged.
+    when: { method: GET, path: "^/cart$", query: { probe: "^T22A$" } }
+    assert:
+      - { select: extract.cartTax, op: equals, value: 44.38 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: TAX-US-CALIFORNIA
+    kind: must
+    title: Billed to US / California, the $500.00 Lenovo shows tax 36.25 (7.25%)
+    why: R28. A state rate applies to every zip in the state.
+    when: { method: GET, path: "^/cart$", query: { probe: "^T22B$" } }
+    assert:
+      - { select: extract.cartTax, op: equals, value: 36.25 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: TAX-US-ANY-STATE
+    kind: must
+    title: Billed to US / Texas, the $500.00 Lenovo shows tax 25.00 (the 5% rate for any US state)
+    why: R28. The country rate applies where no state rate matches.
+    when: { method: GET, path: "^/cart$", query: { probe: "^T22C$" } }
+    assert:
+      - { select: extract.cartTax, op: equals, value: 25 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: TAX-NO-RATE-GERMANY
+    kind: must
+    title: Billed to Germany, the $500.00 Lenovo shows tax 0.00 (no rate for the country)
+    why: R28. Where the shop has no rate it charges none.
+    when: { method: GET, path: "^/cart$", query: { probe: "^T22D$" } }
+    assert:
+      - { select: extract.cartTax, op: equals, value: 0 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: TAX-ZIP-MATCH-IGNORES-CASE
+    kind: must
+    title: Billed to Canada / Ontario / "k1a 0b1", the $500.00 Lenovo shows tax 65.00 (the 13% rate stored for K1A 0B1)
+    why: R29. A postcode typed in lower case is the same postcode.
+    when: { method: GET, path: "^/cart$", query: { probe: "^T23$" } }
+    assert:
+      - { select: extract.cartTax, op: equals, value: 65 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: TAX-FOLLOWS-BILLING-ADDRESS
+    kind: must
+    title: Billed to US / New York / 10001 and shipped to US / Texas, the $500.00 Lenovo shows tax 45.00 - New York's 9%, not Texas's 5%
+    why: R30. The store taxes by billing address (TaxBasedOn = BillingAddress); taxing by the shipping address charges another rate.
+    when: { method: GET, path: "^/cart$", query: { probe: "^T22F$" } }
+    assert:
+      - { select: extract.cartTax, op: equals, value: 45 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: TAX-EXEMPT-NEVER-TAXED
+    kind: never
+    title: The tax-exempt MacBook (x2, billed to US / New York / 10001) never shows tax above 0.00
+    why: R32. Tax charged on an exempt product is money collected without a basis.
+    when: { method: GET, path: "^/cart$", query: { probe: "^T22E$" } }
+    assert:
+      - { select: extract.cartTax, op: gt, value: 0 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: TAX-EXEMPT-CART-PRICED
+    kind: must
+    title: The tax-exempt MacBook cart (x2) shows subtotal 3600.00 and tax 0.00
+    why: R32's positive twin - the never clause needs the cart to show a tax row at all.
+    when: { method: GET, path: "^/cart$", query: { probe: "^T22E$" } }
+    assert:
+      - { select: extract.cartSubtotal, op: equals, value: 3600 }
+      - { select: extract.cartTax, op: equals, value: 0 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  # === Shipping ==========================================================================
+  - id: ESTIMATE-OFFERS-FIXED-RATES-AND-PICKUP
+    kind: must
+    title: The estimate for US / New York / 10001 lists exactly Ground ($10.00), Next Day Air ($40.00), 2nd Day Air ($25.00) and Pickup ($1.99), in that order
+    why: R33. The estimate is the price of delivery the customer decides on; the sample pickup point's $1.99 fee is part of it.
+    when: { method: POST, path: "^/cart/estimateshipping$", query: { probe: "^T24$" } }
+    assert:
+      - { select: extract.shippingEstimates, op: equals, value: ["Ground ($10.00)", "Next Day Air ($40.00)", "2nd Day Air ($25.00)", "Pickup ($1.99)"] }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: CHECKOUT-OFFERS-THE-SAME-RATES
+    kind: must
+    title: The checkout's shipping-method step for the same cart offers Ground ($10.00), 2nd Day Air ($25.00) and Next Day Air ($40.00)
+    why: R33. The checkout must charge for each method what the estimate promised.
+    when: { method: POST, path: "^/checkout/OpcSaveBilling/$", query: { probe: "^T24$" } }
+    assert:
+      - { select: response.body.json.goto_section, op: equals, value: "shipping_method" }
+      - { select: extract.checkoutGround, op: equals, value: "Ground ($10.00)" }
+      - { select: extract.checkoutSecondDayAir, op: equals, value: "2nd Day Air ($25.00)" }
+      - { select: extract.checkoutNextDayAir, op: equals, value: "Next Day Air ($40.00)" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: FREE-SHIPPING-PRODUCTS-SHIP-FREE
+    kind: must
+    title: For a cart of MacBooks only (a free-shipping product), the estimate charges $0.00 for Ground, Next Day Air and 2nd Day Air, and $1.99 for Pickup
+    why: R34, plan section 4a. Free shipping is part of the product's price and every shipping method must honour it; the in-store pickup fee is not shipping and stays.
+    when: { method: POST, path: "^/cart/estimateshipping$", query: { probe: "^T25$" } }
+    assert:
+      - { select: extract.shippingEstimates, op: equals, value: ["Ground ($0.00)", "Next Day Air ($0.00)", "2nd Day Air ($0.00)", "Pickup ($1.99)"] }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: NO-FREE-SHIPPING-AT-EXACTLY-1000
+    kind: must
+    title: A $1,000.00 cart is estimated Ground ($10.00)
+    why: R35. "Free over $1,000.00" means strictly over; at exactly $1,000.00 the customer pays.
+    when: { method: POST, path: "^/cart/estimateshipping$", query: { probe: "^T26-1000$" } }
+    assert:
+      - { select: extract.shippingEstimates, op: contains, value: "Ground ($10.00)" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: FREE-SHIPPING-OVER-1000
+    kind: must
+    title: A $1,024.00 cart is estimated Ground ($0.00)
+    why: R35. Above the threshold shipping is free, as advertised.
+    when: { method: POST, path: "^/cart/estimateshipping$", query: { probe: "^T26-1024$" } }
+    assert:
+      - { select: extract.shippingEstimates, op: contains, value: "Ground ($0.00)" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  # === Checkout and orders ===============================================================
+  - id: GUEST-ORDER-NUMBERED
+    kind: must
+    title: The guest's placed order is shown as order number 6
+    why: R38. Five sample orders exist in the snapshot, so the first order placed is number 6 on every run - a different number means a different starting state or an extra order.
+    when: { method: GET, path: "^/checkout/completed/$", query: { probe: "^T27$" } }
+    assert:
+      - { select: extract.placedOrderNumber, op: equals, value: 6 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: GUEST-ORDER-TOTALS
+    kind: must
+    title: The guest's order details show Sub-Total $500.00, Shipping $10.00, Tax $45.00, Order Total $555.00 and Order Status Pending
+    why: 'R36, R37, R41. The order is what the customer is charged: subtotal plus shipping plus tax, recomputed on the server; a new order waits as Pending.'
+    when: { method: GET, path: "^/orderdetails/[0-9]+$", query: { probe: "^T27$" } }
+    assert:
+      - { select: "extract.orderTotals[*]", op: matches, value: "^Sub-Total: ?\\$500\\.00$", quantifier: any }
+      - { select: "extract.orderTotals[*]", op: matches, value: "^Shipping: ?\\$10\\.00$", quantifier: any }
+      - { select: "extract.orderTotals[*]", op: matches, value: "^Tax: ?\\$45\\.00$", quantifier: any }
+      - { select: "extract.orderTotals[*]", op: matches, value: "^Order Total: ?\\$555\\.00$", quantifier: any }
+      - { select: extract.orderStatus, op: equals, value: "Order Status: Pending" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: BAD-CARD-NUMBER-REFUSED
+    kind: must
+    title: A card number failing its check digit (4111 1111 1111 1112) is answered with the payment form again, saying "Wrong card number"
+    why: R39's positive twin. The customer is told what to fix.
+    when: { method: POST, path: "^/checkout/OpcSavePaymentInfo/$", query: { probe: "^T28$" } }
+    assert:
+      - { select: response.body.json.update_section.html, op: contains, value: "Wrong card number" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: BAD-CARD-NEVER-REACHES-CONFIRM
+    kind: never
+    title: A card number failing its check digit never leads to the confirm step
+    why: R39. An order confirmed on a card number that cannot exist is an order nobody pays for.
+    when: { method: POST, path: "^/checkout/OpcSavePaymentInfo/$", query: { probe: "^T28$" } }
+    assert:
+      - { select: response.body.json.goto_section, op: equals, value: "confirm_order" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: REGISTERED-ORDER-TOTALS
+    kind: must
+    title: R1's order details show Sub-Total $1,000.00, Discount ($100.00), Shipping $40.00, Tax $81.00 (9% of 900.00) and Order Total $1,021.00
+    why: R31, R36. A subtotal discount lowers the taxed amount; the total is what the card is charged.
+    when: { method: GET, path: "^/orderdetails/[0-9]+$", query: { probe: "^T28$" } }
+    assert:
+      - { select: "extract.orderTotals[*]", op: matches, value: "^Sub-Total: ?\\$1,000\\.00$", quantifier: any }
+      - { select: "extract.orderTotals[*]", op: matches, value: "^Discount: ?\\(\\$100\\.00\\)$", quantifier: any }
+      - { select: "extract.orderTotals[*]", op: matches, value: "^Shipping: ?\\$40\\.00$", quantifier: any }
+      - { select: "extract.orderTotals[*]", op: matches, value: "^Tax: ?\\$81\\.00$", quantifier: any }
+      - { select: "extract.orderTotals[*]", op: matches, value: "^Order Total: ?\\$1,021\\.00$", quantifier: any }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: ORDER-EMPTIES-THE-CART
+    kind: must
+    title: After R1's order is placed, the cart answers "Your Shopping Cart is empty!"
+    why: R40. Items left in the cart after an order get ordered twice.
+    when: { method: GET, path: "^/cart$", query: { probe: "^T28-after$" } }
+    assert:
+      - { select: extract.cartEmpty, op: equals, value: "Your Shopping Cart is empty!" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: ORDER-LOWERS-STOCK
+    kind: must
+    title: After R1 ordered 2 of the 3 Lenovos in stock, adding 2 more answers "success":false with "... The maximum quantity that can be added is 1."
+    why: R40. Stock that does not go down with an order is stock sold twice.
+    when: { method: POST, path: "^/addproducttocart/details/3/1$", query: { probe: "^T28$" } }
+    assert:
+      - { select: response.body.json.success, op: equals, value: false }
+      - { select: response.body.json.message, op: contains, value: "Your quantity exceeds stock on hand. The maximum quantity that can be added is 1." }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: HISTORY-LISTS-OWN-ORDERS-ONLY
+    kind: must
+    title: 'The sample customer''s order history lists exactly one order, "Order Number: 1"'
+    why: R42. Order history shows a customer their own orders and nobody else's.
+    when: { method: GET, path: "^/order/history$", query: { probe: "^T29$" } }
+    assert:
+      - { select: extract.historyOrders, op: equals, value: ["Order Number: 1"] }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: OWN-ORDER-DETAILS-SHOWN
+    kind: must
+    title: 'The sample customer''s own order 1 answers 200 with "Order #1"'
+    why: R43. A customer can always see an order of their own.
+    when: { method: GET, path: "^/orderdetails/1$" }
+    assert:
+      - { select: response.status, op: equals, value: 200 }
+      - { select: extract.orderNumber, op: equals, value: "Order #1" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: OWN-ORDER-PDF-INVOICE
+    kind: must
+    title: The PDF invoice of the sample customer's own order 1 answers 200 as application/pdf
+    why: R43. The invoice is a document the customer is owed.
+    when: { method: GET, path: "^/orderdetails/pdf/1$" }
+    assert:
+      - { select: response.status, op: equals, value: 200 }
+      - { select: "response.headers.content-type[0]", op: matches, value: "^application/pdf" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: OTHERS-ORDER-NEVER-SHOWN
+    kind: never
+    title: Someone else's order 2 - its details, print view or PDF - is never answered 200, to a guest or to another customer
+    why: R44. Another customer's order holds their name, address and what they bought.
+    when: { method: GET, path: "^/orderdetails(/print|/pdf)?/2$" }
+    assert:
+      - { select: response.status, op: equals, value: 200 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: OTHERS-ORDER-NEVER-NAMES-ITS-OWNER
+    kind: never
+    title: No answer to a request for someone else's order 2 ever contains its owner's name, Arthur
+    why: R44. Even a refusal must not leak who ordered what.
+    when: { method: GET, path: "^/orderdetails(/print|/pdf)?/2$" }
+    assert:
+      - { select: response.body.text, op: contains, value: "Arthur" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: OTHERS-ORDER-SENDS-TO-LOGIN
+    kind: must
+    title: The requests of T30A and T30B - someone else's order 2 (details, print view, PDF, reorder) and a guest's order history - are redirected (302) to /login?ReturnUrl=...
+    why: The positive twin of R44 and R45's never clauses - they need the requests answered, and the answer is a sign-in.
+    when: { method: GET, path: "^/(orderdetails(/print|/pdf)?/2|reorder/2|order/history)$", query: { probe: "^T30[AB]$" } }
+    assert:
+      - { select: response.status, op: equals, value: 302 }
+      - { select: "response.headers.location[0]", op: matches, value: "^/login\\?ReturnUrl=" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: GUEST-NEVER-GETS-ORDER-HISTORY
+    kind: never
+    title: A guest's request for /order/history is never answered 200
+    why: R45. A guest has no account, so no history; answering it would mean showing someone's.
+    when: { method: GET, path: "^/order/history$", query: { probe: "^T30A$" } }
+    assert:
+      - { select: response.status, op: equals, value: 200 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: NOBODY-REORDERS-OTHERS-ORDER
+    kind: never
+    title: A guest's reorder of someone else's order 2 never leads to the cart
+    why: R45. Reordering another customer's order copies their purchase into a stranger's cart.
+    when: { method: GET, path: "^/reorder/2$", query: { probe: "^T30A$" } }
+    assert:
+      - { select: "response.headers.location[0]", op: matches, value: "^/cart" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  # === Customers =========================================================================
+  - id: SIGN-IN-RETURNS-HOME
+    kind: must
+    title: Signing in with valid credentials answers 302 to /
+    why: Plan T18, T19, T29. A sign-in that does not complete locks the customer out of their account and their prices.
+    when: { method: POST, path: "^/login$" }
+    assert:
+      - { select: response.status, op: equals, value: 302 }
+      - { select: "response.headers.location[0]", op: equals, value: "/" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  - id: REGISTRATION-COMPLETES
+    kind: must
+    title: Registering R1 answers "Your registration completed"
+    why: Plan T28. Registration is how a guest becomes a customer with an order history.
+    when: { method: GET, path: "^/registerresult/1$" }
+    assert:
+      - { select: extract.registrationResult, op: equals, value: "Your registration completed" }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
+
+  # === Every request =====================================================================
+  - id: NEVER-A-SERVER-ERROR
+    kind: never
+    title: No request of the traffic set is ever answered with a server error (5xx)
+    why: A server error loses whatever the customer was doing - a sale, a payment, an account - and says nothing they can act on.
+    assert:
+      - { select: response.status, op: gte, value: 500 }
+    provenance: { origin: designed, status: accepted, author: bench, date: 2026-09-26 }
