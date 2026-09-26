@@ -10,3 +10,4 @@ by editing history.
 | [0002](0002-build-on-windows-2022-with-packaged-reference-assemblies.md) | Build on `windows-2022` with the .NET Framework 4.5.1 reference assemblies from NuGet | P1 |
 | [0003](0003-legacy-host-iis-sqlexpress-unattended-install.md) | Legacy host: IIS through DISM, SQL Server 2022 Express with Windows authentication, nopCommerce's installer driven over HTTP | P2 |
 | [0004](0004-chain-tools-and-eshop-warmup.md) | The chain's tools (sk, Portcullis) built from pinned commits; one scenario is one session, named by a request header; the P3 warm-up on eShopLegacyMVC's mock data | P3 |
+| [0005](0005-nopcommerce-traffic-recording.md) | The nopCommerce traffic set: store configured through the admin UI and read back; every scenario from one database snapshot, when recording too; `probe=<name>` on requests the contract asserts on; a failed scenario does not stop the recording | P4 |

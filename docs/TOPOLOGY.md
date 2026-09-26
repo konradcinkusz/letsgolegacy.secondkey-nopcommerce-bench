@@ -25,9 +25,9 @@
 flowchart LR
     subgraph WIN["Windows host - CI: GitHub windows-2022 runner / workstation: Windows Server VM or Windows with IIS"]
         direction TB
-        GEN["P4 traffic scripts (planned)"] --> PROXY["recording proxy, sk capture (planned, core S9)<br/>http://localhost:8000/"]
+        GEN["P4 traffic scripts"] --> PROXY["recording proxy, sk capture<br/>http://127.0.0.1:8000/"]
         PROXY --> IIS["IIS site nopcommerce-legacy (P2)<br/>http://localhost:8080/"]
-        IIS --> SQL[("SQL Server 2022 Express .\SQLEXPRESS<br/>database nopcommerce_legacy")]
+        IIS --> SQL[("SQL Server 2022 Express .\SQLEXPRESS<br/>database nopcommerce_legacy<br/>+ snapshot nopcommerce_legacy_snapshot")]
         REPLAY["replay, sk replay (planned, P7)"] --> IIS
         REPLAY --> CAND["migrated candidate (planned, P7)<br/>http://localhost:8090/"]
     end
@@ -55,7 +55,8 @@ flowchart LR
 | SQL Server | SQL Server 2022 Express, instance `.\SQLEXPRESS`, server collation `SQL_Latin1_General_CP1_CI_AS`; local connections use shared memory | [`scripts/3-install-iis-sql.ps1`](../scripts/3-install-iis-sql.ps1), [`pins.json`](../pins.json) |
 | Database | `nopcommerce_legacy`, created by nopCommerce's installer with the pinned collation, sample data, Windows authentication (no password anywhere) | step 4 `-DatabaseName` |
 | Store administrator | `admin@nopbench.invalid`, password generated per run, kept in `<work>\secrets\legacy-admin.json` | step 4 |
-| Recording proxy (planned, P4) | `http://localhost:8000/` → `http://localhost:8080/` | P4 |
+| Recording proxy (P4) | `http://127.0.0.1:8000/` → `http://localhost:8080/` | [`scripts/7-record-traffic.ps1`](../scripts/7-record-traffic.ps1) `-ProxyUrl` |
+| Database snapshot (P4) | `nopcommerce_legacy_snapshot`, taken after the store configuration; restored before every scenario | step 7 |
 | Candidate (planned, P7) | `http://localhost:8090/`, its own database copy | P7 |
 | P3 warm-up: eShopLegacyMVC | `http://localhost:8081/`, IIS site `eshop-legacy`, mock data (no database) | [`scripts/eshop/2-deploy-eshop.ps1`](../scripts/eshop/2-deploy-eshop.ps1) |
 | P3 warm-up: recording proxy | `http://127.0.0.1:8001/` → `http://localhost:8081/` | [`scripts/eshop/3-record-eshop.ps1`](../scripts/eshop/3-record-eshop.ps1) |
@@ -69,7 +70,9 @@ hosted runner (`NOPBENCH_WORK`).
 legacy-build.yml
   lint  (ubuntu-24.04)   PSScriptAnalyzer on scripts/
   build (windows-2022)   1-fetch -> 2-build          -> artifact legacy-site (site + manifest)
-  iis   (windows-2022)   needs build: 3-install-iis-sql -> 4-deploy-and-install -> 5-smoke
+  tools (ubuntu-24.04)   chain-tools.yml: sk and Portcullis at their pinned commits -> chain-tools
+  iis   (windows-2022)   needs build, tools: 3-install-iis-sql -> 4-deploy-and-install -> 5-smoke
+                         -> 6-configure-store -> 7-record-traffic (sk capture) -> nopcommerce-traffic
 
 warmup-eshop.yml (P3)
   tools   (ubuntu-24.04)  chain-tools.yml: sk and Portcullis at their pinned commits -> chain-tools
@@ -113,26 +116,30 @@ New-NetFirewallRule -DisplayName 'nopbench legacy 8080' -Direction Inbound -Prot
 Then, from Linux: `pwsh scripts/5-smoke.ps1 -BaseUrl http://<windows-host>:8080/` — the
 smoke test runs on PowerShell 7 on Linux as well.
 
-## How P4 will record traffic (planned)
+## How P4 records traffic
 
-1. **Fresh state.** `4-deploy-and-install.ps1` gives a known starting point: new site,
-   new database, the installer's sample data. Core S11 adds a database snapshot taken
-   right after install, restored before every scenario, so recording and both replays
-   start from the same data.
-2. **Recording proxy in front of IIS.** `sk capture` (core S9: a YARP recording proxy,
-   inbound only, writing `*.skcap`) listens on `:8000` and forwards to `:8080`, on the
-   same Windows host. The legacy system is untouched: no code change, no
-   recompilation, no IIS module.
-3. **Scripted traffic through the proxy, never around it.** The scenarios in
+1. **Known state.** `4-deploy-and-install.ps1` gives a known starting point: new site,
+   new database, the installer's sample data; `6-configure-store.ps1` applies the traffic
+   plan's store configuration through the admin UI. Step 7 then takes a SQL Server
+   database snapshot and restores it before every scenario, so recording and both
+   replays start from the same data — `sk replay`'s `sqlServerSnapshot` reset restores
+   the same snapshot.
+2. **Recording proxy in front of IIS.** `sk capture` (a YARP recording proxy, inbound
+   only, writing `*.skcap`) listens on `127.0.0.1:8000` and forwards to `:8080`, on the
+   same Windows host. The legacy system is untouched: no code change, no recompilation,
+   no IIS module.
+3. **Scripted traffic through the proxy, never around it.** The scenarios of
    [`P4-TRAFFIC-PLAN.md`](P4-TRAFFIC-PLAN.md) drive the shop as a browser would —
-   cookies kept, anti-forgery tokens read from each form (the sample store enables
-   them) — against `http://localhost:8000/`.
-4. **The proxy should forward the `Host` it received.** nopCommerce builds some links
-   and redirects from the request's host; if the proxy rewrote it to `:8080`, follow-up
-   requests could bypass the recording.
-5. **Output:** one `*.skcap` per run, uploaded as an artifact with the site manifest
-   digest (`state\build.json`) so the recording names the exact legacy build it
-   observed.
+   one cookie jar per scenario, anti-forgery tokens read from each form — against
+   `http://127.0.0.1:8000/`. Each scenario is one session in the capture: every request
+   carries `x-bench-scenario: <id>`, the capture's session key.
+4. **Host.** `sk capture` sends the target's host upstream (YARP's default), so the
+   absolute URLs nopCommerce builds from the request host — the one-page checkout's
+   script URLs — name `:8080`. A browser following them would leave the proxy; the
+   scripted sessions request relative paths only, so nothing bypasses the recording.
+5. **Output:** one `*.skcap` per run, uploaded as the `nopcommerce-traffic` artifact
+   with `state\traffic.json`, which names the site manifest digest, so the recording
+   names the exact legacy build it observed.
 
 ## What the host adds to behaviour — and is therefore fixed
 

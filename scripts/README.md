@@ -11,6 +11,8 @@ by running the same step.
 | 3 | [`3-install-iis-sql.ps1`](3-install-iis-sql.ps1) | Windows (Server or 10/11), elevated | IIS with ASP.NET 4.x; SQL Server 2022 Express as `.\SQLEXPRESS`; `state\platform.json` |
 | 4 | [`4-deploy-and-install.ps1`](4-deploy-and-install.ps1) | Windows, elevated, after 2 and 3 | IIS site `nopcommerce-legacy` on `http://localhost:8080/`, database `nopcommerce_legacy` with sample data; `state\deploy.json`; the run's admin credentials in `secrets\legacy-admin.json` |
 | 5 | [`5-smoke.ps1`](5-smoke.ps1) | Any machine that reaches the shop (PowerShell 5.1 or 7, Windows or Linux) | Pass/fail per check; `state\smoke.json` |
+| 6 | [`6-configure-store.ps1`](6-configure-store.ps1) | After 4 (the administrator's credentials) | The store configured as [section 2 of the traffic plan](../docs/P4-TRAFFIC-PLAN.md#2-store-configuration-before-recording) needs it, through the admin UI, every change read back; schedule tasks disabled and the application restarted; `state\store-config.json` |
+| 7 | [`7-record-traffic.ps1`](7-record-traffic.ps1) | After 6, on the shop's host, `sk` | Database snapshot `nopcommerce_legacy_snapshot`; `<work>\traffic\nopcommerce.skcap` through `sk capture` on `:8000`, every scenario from the snapshot; `state\traffic.json` (scenarios, session ids, counts) |
 
 Not a step: [`collect-diagnostics.ps1`](collect-diagnostics.ps1) gathers IIS, event log,
 SQL Server and nopCommerce logs into `<work>\diagnostics` after a failure (CI uploads it
@@ -30,6 +32,9 @@ From a PowerShell prompt (Windows PowerShell 5.1 or PowerShell 7) in the reposit
 .\scripts\3-install-iis-sql.ps1
 .\scripts\4-deploy-and-install.ps1
 .\scripts\5-smoke.ps1
+# P4: the traffic set (needs the chain's tools, below)
+.\scripts\6-configure-store.ps1
+.\scripts\7-record-traffic.ps1
 ```
 
 If script execution is blocked by policy, run each script with
@@ -67,7 +72,10 @@ Every value has a default; nothing is required.
 | `-DatabaseName` | 4 | `nopcommerce_legacy` | Dropped and recreated on every run. |
 | `-AdminEmail` | 4 | `admin@nopbench.invalid` | Store administrator e-mail (reserved domain). |
 | `NOPBENCH_ADMIN_PASSWORD` | 4 | generated per run | Use a known administrator password instead of a generated one. Keep it out of files in the repository. |
-| `-BaseUrl` | 5 | from `state\deploy.json`, else `http://localhost:8080/` | Shop to test. |
+| `-BaseUrl` | 5, 6 | from `state\deploy.json`, else `http://localhost:8080/` | Shop to test or configure. |
+| `-Out` | 7 | `<work>\traffic\nopcommerce.skcap` | The recording. |
+| `-ProxyUrl` | 7 | `http://127.0.0.1:8000/` | Where the recording proxy listens. |
+| `-Only` | 7 | all | Scenario ids to record, for working on one scenario; such a recording is marked partial and is not the traffic set. |
 | `NOPBENCH_SK`, `NOPBENCH_PORTCULLIS` | steps that drive the chain | `<work>\tools\chain\secondkey\SecondKey.Cli.dll`, `<work>\tools\chain\portcullis\Portcullis.Cli.dll` | The chain's tools (below). |
 
 ## Hand-off files
@@ -84,6 +92,8 @@ then the default. You never have to remember where the last step put things.
 | `state\platform.json` | step 3 | IIS state, SQL Server instance, version and collation |
 | `state\deploy.json` | step 4 | URL, site, identity, database and its collation, table and product counts, timings |
 | `state\smoke.json` | step 5 | every check with status, time and result |
+| `state\store-config.json` | step 6 | what was configured, with the ids it got (tax category, countries, products, discounts, customer role) |
+| `state\traffic.json` | step 7 | the recording's path and digest, scenario list with session ids and request counts, snapshot, the answers to the first request after each restore, the site manifest digest |
 
 ## Recipes
 
@@ -101,6 +111,13 @@ then the default. You never have to remember where the last step put things.
 - **Smoke-test from Linux:** `pwsh scripts/5-smoke.ps1 -BaseUrl http://<windows-host>:8080/`
   (open the port on the Windows host first; docs/TOPOLOGY.md has the command).
 - **After a failure:** `.\scripts\collect-diagnostics.ps1`, then read `<work>\diagnostics`.
+- **Work on one scenario of the traffic set:** `.\scripts\7-record-traffic.ps1 -Only T14`
+  (every scenario starts from the snapshot, so any one runs alone). Step 7 runs every
+  scenario even after one fails, prints nopCommerce's own log for the failed one (the
+  next restore erases it), and fails at the end.
+- **Configure again:** step 6 expects the store as step 4 installed it, and on a store it
+  already configured it fails (the tax rates read back twice, the MacBook is already tax
+  exempt). Reinstall first (step 4).
 
 ## The chain's tools
 
@@ -142,6 +159,17 @@ Not steps: [`eshop/Reset-EShop.ps1`](eshop/Reset-EShop.ps1) restarts the applica
 and waits for the starting catalog (step 3 calls it before each scenario, `sk replay`
 before each scenario on each side); [`eshop/EShop.Scenarios.ps1`](eshop/EShop.Scenarios.ps1)
 holds the traffic.
+
+## The P4 traffic set: `traffic\`
+
+[`traffic/NopCommerce.Scenarios.ps1`](traffic/NopCommerce.Scenarios.ps1) holds the
+scenarios of [`../docs/P4-TRAFFIC-PLAN.md`](../docs/P4-TRAFFIC-PLAN.md) section 4 as scripted
+browser sessions (its section 4a lists where one planned scenario became several), on top of
+[`lib/NopBench.Shop.ps1`](lib/NopBench.Shop.ps1): the storefront as a browser drives it -
+product pages, the cart form, coupons, the shipping estimate, sign-in, registration and
+the one-page checkout, each sending exactly what the shop's own pages and scripts send.
+A request whose answer the P5 contract asserts a scenario-specific fact on carries
+`probe=<name>` in its query (section 1 of the plan says why).
 
 ## Conventions
 

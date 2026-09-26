@@ -7,7 +7,11 @@ cites it: this is how *this* shop behaves, not how a shop should behave in gener
 - **Source read:** `release-3.90`, commit `12d1f01` (pinned in [`pins.json`](../pins.json)).
   Paths are relative to `src/` in that tree; line numbers refer to that commit.
 - **Counts:** 30 scenarios, 46 rules, 9 of them absence ("never") rules — 20% (§8).
-- **Status:** plan. P4 turns §1–§4 into scripts and a `*.skcap`; P5 turns §5 into
+  Recorded as 38 scenario sessions (§4a).
+- **Status:** §1–§4 are recorded (P4): [`scripts/6-configure-store.ps1`](../scripts/6-configure-store.ps1)
+  applies §2, [`scripts/traffic/NopCommerce.Scenarios.ps1`](../scripts/traffic/NopCommerce.Scenarios.ps1)
+  holds §4 and [`scripts/7-record-traffic.ps1`](../scripts/7-record-traffic.ps1) records it;
+  what a run recorded is in [`results/p4`](../results/p4/README.md). P5 turns §5 into
   `contract.yaml`. Scenario (`T`) and rule (`R`) ids are stable so both can cite them.
 
 **Contents**
@@ -15,7 +19,7 @@ cites it: this is how *this* shop behaves, not how a shop should behave in gener
 1. [How the traffic is recorded](#1-how-the-traffic-is-recorded)
 2. [Store configuration before recording](#2-store-configuration-before-recording)
 3. [Personas](#3-personas)
-4. [Scenarios](#4-scenarios)
+4. [Scenarios](#4-scenarios) — [4a. As recorded](#4a-as-recorded)
 5. [Contract rules](#5-contract-rules)
 6. [NLS → ICU probes (for P7)](#6-nls--icu-probes-for-p7)
 7. [What the comparator must normalise](#7-what-the-comparator-must-normalise)
@@ -28,21 +32,32 @@ cites it: this is how *this* shop behaves, not how a shop should behave in gener
 ## 1. How the traffic is recorded
 
 - **Start state.** `scripts/4-deploy-and-install.ps1` (fresh site, fresh database, the
-  installer's sample data), then the configuration of §2, then the database snapshot of
-  core S11. Every scenario starts from that snapshot — on legacy and on the candidate —
-  so scenarios are independent of each other and of their order.
-- **Through the recording proxy only** (`http://localhost:8000/` → `:8080`,
+  installer's sample data), then the configuration of §2, then a SQL Server database
+  snapshot (`nopcommerce_legacy_snapshot`, taken by step 7). Every scenario starts from
+  that snapshot — when recording, and on legacy and on the candidate in every replay — so
+  scenarios are independent of each other and of their order.
+- **Through the recording proxy only** (`http://127.0.0.1:8000/` → `:8080`,
   [`TOPOLOGY.md`](TOPOLOGY.md)). A request that bypasses the proxy is not evidence.
-- **As a browser would.** One cookie jar per persona; the shop's own links and forms;
-  `__RequestVerificationToken` read from the page where it is validated. The sample store
-  turns anti-forgery on for the public store (`EnableXsrfProtectionForPublicStore = true`,
+- **One scenario, one session.** Each scenario is one browser session with its own cookie
+  jar, and every request carries the header `x-bench-scenario: <id>` — the capture's
+  session key, so a scenario is one session in the `*.skcap` and one scenario in the
+  replay. A story with two people in it is two scenarios (§4a).
+- **As a browser would.** The shop's own links and forms; each form posted with every
+  field the page gives it; `__RequestVerificationToken` read from the page where it is
+  validated. The sample store turns anti-forgery on for the public store
+  (`EnableXsrfProtectionForPublicStore = true`,
   `Libraries/Nop.Services/Installation/CodeFirstInstallationService.cs`) and it applies to
   actions marked `[PublicAntiForgery]` — in this set: estimate shipping
-  (`ShoppingCartController.GetEstimateShipping`) and customer address edits
-  (`CustomerController`). Add-to-cart, cart updates, coupons, login, registration and the
+  (`ShoppingCartController.GetEstimateShipping`) and registration
+  (`CustomerController.Register`). Add-to-cart, cart updates, coupons, login and the
   one-page checkout do not validate it.
-- **Deterministic inputs.** Fixed products, quantities, addresses and coupon codes. The
-  only per-run value is the e-mail address registered in T28, derived from the run id.
+- **Probes.** The contract language scopes a clause by method, path and query only, so a
+  request whose answer P5 asserts a scenario-specific fact on carries `probe=<name>` in
+  its query (`/cart?probe=T11`, `/cart/estimateshipping?probe=T26-1024`). nopCommerce
+  ignores unknown query parameters on these routes; the parameter only names the request.
+- **Deterministic inputs.** Fixed products, quantities, addresses, coupon codes and
+  customers — R1 registers as `r1@nopbench.invalid` every time: every scenario starts
+  from the snapshot, so the address is always free.
 - **No outbound calls.** Only the offline payment methods (Check / Money Order, Manual)
   and the offline rate providers are used; PayPal and the carrier plugins stay idle, so
   core S16 (outbound stubs) is not needed for this set.
@@ -71,18 +86,21 @@ system, never through SQL — with the administrator credentials step 4 generate
 | Tax provider | Switch to "by country / state / zip". Tax category *Electronics & Software*: US / New York / zip `10001` → 9.000%; US / New York / any zip → 8.875%; US / California → 7.250%; US / any state → 5.000%; Canada / Ontario / zip `K1A 0B1` → 13.000%. Nothing for Germany. Mark "Apple MacBook Pro 13-inch" tax exempt. | T21–T23 |
 | Shipping | Fixed rate per method: Ground $10.00, 2nd Day Air $25.00, Next Day Air $40.00. Free shipping over $1,000.00, excluding tax. | T24–T26 |
 | Discounts (each needs its coupon, so none leaks into other scenarios) | `SAVE10` 10% of order subtotal · `TAKE50` $50.00 off order total · `PCT20MAX100` 20% of order subtotal, maximum $100.00 · `SHIPFREE` 100% of shipping · `ONCE5` $5.00 off order total, 1 time per customer · `FUTURE10` 10% of order subtotal from 2099-01-01 · `MEMBERS15` 15% of order subtotal, requirement "customer role is Registered" (`DiscountRules.CustomerRoles`) | T11–T20 |
-| Catalog | Unpublish "HP Envy 6-1180ca 15.6-Inch Sleekbook". Stock of "Lenovo IdeaCentre 600 All-in-One PC" to 3 (it already manages stock without backorders). | T02, T05–T07, T28 |
+| Background tasks | Disable the schedule tasks the sample install enables — "Send emails" (every 60 s), "Keep alive" (300 s), "Delete guests" (600 s), "Update currency exchange rates" (3600 s, an outbound call) — and restart the application. 3.90 runs them on timers inside the web application, and `Task.Execute` reads its task row before its `try` (`Libraries/Nop.Services/Tasks/Task.cs`): under a database restore that read throws on a timer thread and takes the worker process down, and the shop answers 500 until it has restarted. Every scenario starts with a restore. | every scenario |
+| Catalog | Unpublish "HP Envy 6-1180ca 15.6-Inch Sleekbook", and switch off the catalog setting "Allow viewing of unpublished product details page" — the sample install turns it on (`AllowViewUnpublishedProductPage = true`), which serves an unpublished product's page to anyone, marked "discontinued" (`ProductController.ProductDetails`, line 119). Stock of "Lenovo IdeaCentre 600 All-in-One PC" to 3 (it already manages stock without backorders). | T02, T05–T07, T28 |
 
 Currency (USD, display locale `en-US`), tax display (excluding tax), price rounding
-during calculation, anonymous checkout and one-page checkout stay as installed.
+during calculation, anonymous checkout and one-page checkout stay as installed. Every
+change is read back from the admin UI, and a settings or product form posted back is
+re-read and compared field by field, so nothing else changes unnoticed.
 
 ## 3. Personas
 
 | Persona | Who | Notes |
 |---|---|---|
 | G1 | A guest shopper | Own cookie jar |
-| G2 | A second guest | Tries to reach G1's order |
-| R1 | A customer who registers in T28 | E-mail derived from the run id |
+| G2 | A second guest | Tries to reach someone else's order |
+| R1 | A customer who registers in T28 | `r1@nopbench.invalid`, with the password it registers with |
 | S1 | Sample customer `steve_gates@nopCommerce.com` | Registered; owns sample order 1. Password: the one the installer gives its sample customers (`CodeFirstInstallationService.InstallCustomersAndUsers`) — public sample data, not a secret |
 
 Sample order 2 belongs to `arthur_holmes@nopCommerce.com` (`InstallOrders`), who never
@@ -123,6 +141,65 @@ appears in no scenario.
 | T28 | Checkout | R1 | Register at `/register`; Lenovo × 2 with `SAVE10`; Next Day Air; payment Manual, first with card `4111 1111 1111 1112`, then `4111 1111 1111 1111`; confirm; open the Lenovo page | Registered checkout; card check digit; stock decreases (3 → 1); cart emptied | `Plugins/Nop.Plugin.Payments.Manual/Validators/PaymentInfoValidator.cs`, `Presentation/Nop.Web.Framework/Validators/CreditCardPropertyValidator.cs`, `PlaceOrder` (lines 1352–1357) |
 | T29 | Orders | S1 | Log in; `GET /order/history`, `/orderdetails/1`, `/orderdetails/pdf/1` | Order history and details of one's own order | `OrderController.CustomerOrders` (line 64), `Details` (line 156), `GetPdfInvoice` (line 181) |
 | T30 | Orders | G1, G2, S1 | G1 places a guest order (as T27); G2 requests its `/orderdetails/{id}`, `/orderdetails/print/{id}`, `/orderdetails/pdf/{id}`, `/reorder/{id}` and `/order/history`; S1 requests `/orderdetails/2` | Nobody sees or reorders someone else's order; guests have no order history | `OrderController` (`order.CustomerId != CurrentCustomer.Id` → 401; Forms authentication turns a 401 into a redirect to `/login`) |
+
+## 4a. As recorded
+
+The table above is the plan; the recording follows it with these refinements, each
+forced by one scenario being one session that starts from the snapshot, or by what the
+shop turned out to do. Recorded: **38 scenario sessions** covering the 30 planned, 290
+exchanges ([`results/p4`](../results/p4/README.md)).
+
+| Planned | Recorded as | Why |
+|---|---|---|
+| T12 | T12 (` save10 `), T12B (`SAVE10`+U+180E) | "On a fresh cart" is a fresh session |
+| T18 | T18A (G1), T18B (S1) | Two people, two sessions |
+| T22 | T22A (US/NY/`10002`), T22B (US/CA), T22C (US/TX), T22D (Germany), T22E (MacBook × 2, US/NY/`10001`) | One address per checkout, each from the snapshot |
+| — | T22F: billed to US/NY/`10001`, shipped to US/TX; tax is New York's | R30 ("tax follows the billing address") needs a billing address that differs from the shipping one; in T21–T23 they are the same |
+| T27 | `GET /checkout/completed/` without the id | What the checkout script requests (`ConfirmOrder.init(…, '…checkout/completed/')`); the page shows the customer's last order |
+| T28 "open the Lenovo page" | Adding 2 more Lenovos is refused: "The maximum quantity that can be added is 1." | Shows the stock went 3 → 1 in an answer, not just on a page |
+| T30 | T30A (G2: details, print, PDF and reorder of order 2, and `/order/history`), T30B (S1: `/orderdetails/2`) | G1's order would not exist in G2's session — every scenario starts from the snapshot — so "someone else's order" is sample order 2, Arthur Holmes's |
+
+What scripting and recording the set showed, for P5 to assert and P7 to compare:
+
+- **T05 needs the catalog setting of §2.** Unpublishing alone leaves the product page
+  open to everyone (`AllowViewUnpublishedProductPage = true` in the sample settings).
+- **A restore under a running schedule task crashes the shop** — hence the background
+  tasks row of §2. Seen once in the first full recording: the first requests after a
+  restore were answered 500, then the application started again.
+- **Checkout starts at the cart's Checkout button.** The sample store has a required
+  checkout attribute, "Gift wrapping", saved when the cart form is posted
+  (`ShoppingCartController.StartCheckout`); an order from a customer who went straight to
+  `/onepagecheckout` is refused with "Please select Gift wrapping;". Every checkout in the
+  set goes cart → Checkout → (guest: "Checkout as Guest") → `/checkout` → one-page
+  checkout, as a browser does.
+- **The shipping estimate also offers in-store pickup, "Pickup ($1.99)"** — the sample
+  pickup point — and free shipping does not waive that fee: a cart of MacBooks is
+  estimated $0.00 for every shipping method and $1.99 for pickup (T25). R33 and R34 hold
+  for the shipping methods; the pickup option is recorded as it is.
+- **T18A: the customer-role requirement refuses with an empty message.** The rule sets no
+  `UserError`, `ValidateDiscount` passes that `null` on, and `ApplyDiscountCoupon` shows
+  it as the only message — the coupon box holds one empty failure message, not "The
+  coupon code you entered couldn't be applied"
+  (`Plugins/Nop.Plugin.DiscountRules.CustomerRoles/CustomerRoleDiscountRequirementRule.cs`,
+  `DiscountService.GetValidationResult`, `ShoppingCartController.ApplyDiscountCoupon`).
+  R24 holds; the message is legacy behaviour a migration may "fix".
+- **T12B: `SAVE10` followed by U+180E is refused** ("The coupon code you entered couldn't
+  be applied to your order") on .NET Framework 4.8.
+- **Negative amounts are written in parentheses**: `($100.00)`, `($34.00)`, `($75.00)` —
+  the en-US currency format of .NET Framework 4.8 on Windows Server 2022 (§6's first
+  probe).
+- **A zero order total skips the payment steps** (`CheckoutController.OpcLoadStepAfterShippingMethod`).
+  T14 therefore checks out first and applies `TAKE50` last, as planned.
+
+Requests that carry a probe: T07, T08, T09 (the refused add and the cart);
+T10-quantity, T10-remove, T10-zero; T11, T12, T12B, T13-expired, T13-future,
+T13-unknown, T14, T15, T16, T17, T18A, T18B, T19, T20 (the coupon answer or the cart);
+T21, T22A–T22F, T23 (the cart after checkout); T24 (the estimate and the billing step's
+answer, which lists the shipping methods); T25, T26-1000, T26-1024 (estimates); T27 (the
+completed page and the order details); T28 (the refused card, the completed page, the
+order details, the empty cart `T28-after`, the refused add); T29 (the order history);
+T30A and T30B (every request: the guest's order history is refused on a URL Steve also
+uses, so each needs its name).
 
 ## 5. Contract rules
 
@@ -214,7 +291,7 @@ ids must match on both sides (`CustomOrderNumberMask = "{ID}"` in the sample set
 
 | | Count |
 |---|---|
-| Scenarios | 30 (T01–T30) |
+| Scenarios | 30 (T01–T30), recorded as 38 sessions (§4a) |
 | Rules | 46 (R01–R46) |
 | `must` | 37 |
 | `never` (absence) | 9 — R05, R19, R20, R23, R24, R32, R39, R44, R45 — 19.6% |
