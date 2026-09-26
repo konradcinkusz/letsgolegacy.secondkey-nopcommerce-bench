@@ -1,0 +1,29 @@
+# Second Key configuration for the nopCommerce bench (P5): the replay of the P4 traffic
+# set, and where compare and evidence find the contract. The scripts pass the capture,
+# the run and both base URLs on the command line (scripts/8-replay.ps1); this file holds
+# what the command line cannot say. Paths are relative to this file.
+version: 1
+replay:
+  scenarioMode: session
+  # Generous: the first request of a scenario follows a database restore.
+  timeoutSeconds: 120
+  # Every scenario starts, on each side, from the snapshot step 7 recorded from: the
+  # configured store (docs/adr/0005-nopcommerce-traffic-recording.md). The connection
+  # string is read from NOPBENCH_SK_SQL, which scripts/8-replay.ps1 sets (Windows
+  # authentication; no secret). A/A: both sides are the same shop and database.
+  legacy:
+    reset:
+      sqlServerSnapshot: { connectionStringEnv: NOPBENCH_SK_SQL, database: nopcommerce_legacy, snapshot: nopcommerce_legacy_snapshot }
+  candidate:
+    reset:
+      sqlServerSnapshot: { connectionStringEnv: NOPBENCH_SK_SQL, database: nopcommerce_legacy, snapshot: nopcommerce_legacy_snapshot }
+  # The cart, estimate-shipping and registration forms carry an anti-forgery token issued
+  # with the page; the replay posts the one the page it just loaded issued.
+  correlation:
+    - name: csrf
+      regex: 'name="__RequestVerificationToken" type="hidden" value="([^"]+)"'
+      formField: __RequestVerificationToken
+compare:
+  contract: contract.yaml
+evidence:
+  contract: contract.yaml

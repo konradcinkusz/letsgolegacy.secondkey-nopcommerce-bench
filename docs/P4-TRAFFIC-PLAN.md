@@ -11,8 +11,9 @@ cites it: this is how *this* shop behaves, not how a shop should behave in gener
 - **Status:** §1–§4 are recorded (P4): [`scripts/6-configure-store.ps1`](../scripts/6-configure-store.ps1)
   applies §2, [`scripts/traffic/NopCommerce.Scenarios.ps1`](../scripts/traffic/NopCommerce.Scenarios.ps1)
   holds §4 and [`scripts/7-record-traffic.ps1`](../scripts/7-record-traffic.ps1) records it;
-  what a run recorded is in [`results/p4`](../results/p4/README.md). P5 turns §5 into
-  `contract.yaml`. Scenario (`T`) and rule (`R`) ids are stable so both can cite them.
+  what a run recorded is in [`results/p4`](../results/p4/README.md). P5 turned §5 into
+  [`contract/contract.yaml`](../contract/README.md). Scenario (`T`) and rule (`R`) ids are
+  stable so both can cite them.
 
 **Contents**
 

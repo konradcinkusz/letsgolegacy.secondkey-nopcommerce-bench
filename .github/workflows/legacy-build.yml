@@ -4,7 +4,11 @@
 #   iis   (P2) - deploy that artifact to IIS with SQL Server Express, install the sample
 #                data and check that the shop answers;
 #         (P4) - configure the store as the traffic plan needs it and record the traffic
-#                set through `sk capture` -> the nopcommerce-traffic artifact.
+#                set through `sk capture` -> the nopcommerce-traffic artifact;
+#         (P5) - replay it A/A (`sk replay`, the database restored before every scenario on
+#                each side) -> the nopcommerce-replay artifact;
+#   verdict (P5) - on Linux, file in, file out: the contract's verdict on that run (it must
+#                pass) and the evidence pack -> the nopcommerce-evidence-pack artifact.
 # Every step calls a numbered runbook script, so a person on a Windows machine runs
 # exactly what CI runs (scripts/README.md).
 name: legacy-build
@@ -129,7 +133,7 @@ jobs:
     # artifact the build job published, exactly as a person would deploy it.
     # P4: the same running shop, configured and recorded - capture needs the application,
     # so it runs where the application runs (docs/TOPOLOGY.md).
-    name: Legacy under IIS with SQL Server (install, smoke, configure, record traffic)
+    name: Legacy under IIS with SQL Server (install, smoke, configure, record, replay A/A)
     needs: [build, tools]
     runs-on: ${{ inputs.runner || 'windows-2022' }}
     timeout-minutes: 60
@@ -182,6 +186,9 @@ jobs:
       - name: 7 - Record the traffic set through sk capture
         run: .\scripts\7-record-traffic.ps1
 
+      - name: 8 - Replay the traffic set A/A (sk replay)
+        run: .\scripts\8-replay.ps1
+
       - name: Upload the traffic set
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -198,6 +205,19 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+      - name: Upload the replay
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nopcommerce-replay
+          # Relative to the work root, like the traffic set: replay\ and state\.
+          path: |
+            ${{ runner.temp }}\nopbench\replay
+            ${{ runner.temp }}\nopbench\state\replay.json
+            ${{ runner.temp }}\nopbench\state\traffic.json
+          if-no-files-found: ignore
+          retention-days: 30
+
       - name: Collect diagnostics
         if: failure()
         run: .\scripts\collect-diagnostics.ps1
@@ -210,3 +230,53 @@ jobs:
           path: ${{ runner.temp }}\nopbench\diagnostics
           if-no-files-found: ignore
           retention-days: 7
+
+  verdict:
+    # P5: the contract's verdict on the A/A replay, and the evidence pack - file in, file out,
+    # on Linux (docs/TOPOLOGY.md). An A/A run must pass with every accepted clause held.
+    name: Contract verdict and evidence pack (file in, file out)
+    needs: [tools, iis]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out the bench
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set the work root
+        run: |
+          [System.IO.File]::AppendAllText($env:GITHUB_ENV, "NOPBENCH_WORK=$env:RUNNER_TEMP/nopbench`n")
+
+      - name: Download the chain's tools
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: chain-tools
+          path: ${{ runner.temp }}/nopbench/tools/chain
+
+      - name: Download the replay
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: nopcommerce-replay
+          path: ${{ runner.temp }}/nopbench
+
+      - name: Set up the .NET runtime for the chain's tools
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: 9 - Contract verdict and evidence pack
+        # The hosted image has Google Chrome, so the pack must carry its PDF.
+        run: ./scripts/9-verdict.ps1 -Pdf required
+
+      - name: Upload the evidence pack
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nopcommerce-evidence-pack
+          path: ${{ runner.temp }}/nopbench/replay/evidence
+          if-no-files-found: ignore
+          retention-days: 30

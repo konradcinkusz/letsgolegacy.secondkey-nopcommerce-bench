@@ -54,6 +54,21 @@ The scenarios are [`docs/P4-TRAFFIC-PLAN.md`](docs/P4-TRAFFIC-PLAN.md)'s, script
 the smoke test and uploads the recording as the `nopcommerce-traffic` artifact; what a
 run recorded is in [`results/p4`](results/p4/README.md).
 
+## The contract (P5)
+
+[`contract/contract.yaml`](contract/contract.yaml) states what the shop must do and must
+never do on that traffic — 76 clauses, 15 of them `never` — and CI proves it on the
+legacy shop itself: an A/A replay (the database restored before every scenario on each
+side) whose `sk compare` verdict must be `pass` with every clause held.
+
+```powershell
+.\scripts\8-replay.ps1                  # on the shop's host: sk replay, A/A
+pwsh scripts/9-verdict.ps1              # anywhere: sk compare and the evidence pack
+```
+
+How the contract is written and what it covers: [`contract/`](contract/README.md); what
+a run showed: [`results/p5`](results/p5/README.md).
+
 ## Warm-up: the chain on eShopLegacyMVC (P3)
 
 Before the chain meets nopCommerce it runs once, end to end, on Microsoft's sample legacy
