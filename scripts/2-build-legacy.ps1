@@ -20,6 +20,10 @@
     Needs Windows with Visual Studio 2022 (or Build Tools 2022) including the ASP.NET and
     web development workload, and git. No administrator rights are needed.
 
+    With -Patch the same build is made of the pinned source plus one patch - a P9 mutant
+    (docs/P9-MUTANTS.md); without it, which is how the legacy site is always built, nothing
+    of the above changes.
+
 .PARAMETER WorkRoot
     Default: $env:NOPBENCH_WORK, else C:\nopbench.
 
@@ -36,8 +40,19 @@
 .PARAMETER NuGet
     Path to nuget.exe. Default: nuget.exe on PATH, else the pinned NuGet.CommandLine package.
 
+.PARAMETER Patch
+    A unified diff to build into the site: a P9 mutant (mutants\*.patch). The checkout must
+    still be the clean pinned tree. The patch is applied to it, the tree is checked to hold
+    exactly the patch before and after the build, and the patched files are then restored
+    from the checkout, so the tree ends clean. state\build.json records the patch and its
+    SHA-256. Build a mutant into a work root of its own (-WorkRoot), so its state files and
+    manifest never replace the legacy site's.
+
 .EXAMPLE
     .\scripts\2-build-legacy.ps1
+
+.EXAMPLE
+    .\scripts\2-build-legacy.ps1 -WorkRoot C:\nopmut -SiteDir C:\nopmut\mutant-site -Patch mutants\M01-free-shipping-at-the-threshold.patch
 #>
 [CmdletBinding()]
 param(
@@ -45,7 +60,8 @@ param(
     [string] $SourceDir,
     [string] $SiteDir,
     [string] $MSBuild,
-    [string] $NuGet
+    [string] $NuGet,
+    [string] $Patch
 )
 
 Set-StrictMode -Version 3.0
@@ -157,6 +173,19 @@ $commonProperties = @(
     '/p:ImportDirectoryBuildTargets=false'
 )
 
+# --- Patch (a P9 mutant only) -------------------------------------------------------
+$patchRecord = $null
+$patchFiles = @()
+if ($Patch) {
+    Enter-BenchGroup ('Apply the patch {0}' -f $Patch)
+    $patchPath = Get-BenchFullPath $Patch
+    if (-not (Test-Path -LiteralPath $patchPath -PathType Leaf)) { throw ('Patch not found: {0}' -f $patchPath) }
+    $patchFiles = Add-BenchPatch -SourceDir $SourceDir -Patch $patchPath
+    $patchRecord = [ordered]@{ file = (Split-Path -Leaf $patchPath); path = $patchPath; sha256 = (Get-BenchSha256 $patchPath); files = $patchFiles }
+    Write-BenchLog ('Applied {0} (sha256 {1}): {2}' -f $patchRecord.file, $patchRecord.sha256, ($patchFiles -join ', '))
+    Exit-BenchGroup
+}
+
 # --- Restore ------------------------------------------------------------------------
 Enter-BenchGroup 'nuget restore (packages.config)'
 Invoke-BenchNative -FilePath $nugetExe -ArgumentList @('restore', $solution, '-NonInteractive', '-MSBuildPath', (Split-Path -Parent $msbuildExe))
@@ -229,7 +258,13 @@ if ($problems.Count -gt 0) {
 }
 Write-BenchLog ('Site OK: {0} plugins ({1})' -f $pluginFolders.Count, (($pluginFolders | ForEach-Object { $_.Name }) -join ', '))
 
-# The build must not have changed upstream source either.
+# The build must not have changed upstream source either - nothing beyond the patch, when
+# there is one, and the patch then comes out again.
+if ($patchRecord) {
+    Assert-BenchPatchedTree -SourceDir $SourceDir -Patch $patchRecord.path -Files $patchFiles
+    Undo-BenchPatch -SourceDir $SourceDir -Files $patchFiles
+    Write-BenchLog ('The build changed nothing beyond the patch; {0} restored from the checkout.' -f ($patchFiles -join ', '))
+}
 if (-not (Test-BenchPinnedCheckout -Directory $SourceDir -Commit $nop.commit)) {
     throw 'The build modified tracked files in the nopCommerce checkout.'
 }
@@ -257,36 +292,38 @@ Write-BenchLog ('{0} files, {1:N1} MB, manifest sha256 {2}' -f $sorted.Count, ($
 Exit-BenchGroup
 Complete-Phase 'verify'
 
-Write-BenchState -WorkRoot $work -Name 'build' -Data ([ordered]@{
-        nopCommerce = [ordered]@{ repository = $nop.repository; tag = $nop.tag; commit = $nop.commit }
-        configuration = 'Release'
-        siteDir = $SiteDir
-        site = [ordered]@{ files = $sorted.Count; bytes = $totalBytes; plugins = $pluginFolders.Count; manifest = 'legacy-site.sha256'; manifestSha256 = $siteDigest }
-        toolchain = [ordered]@{
-            msbuild = $msbuildVersion
-            nuget = $nugetVersion
-            referenceAssemblies = ('{0} {1}' -f $refPackage.id, $refPackage.version)
-            targetFrameworkRootPath = $targetFrameworkRoot
-            machineTargetingPack = $machinePackState
-        }
-        host = [ordered]@{ os = [System.Environment]::OSVersion.VersionString; image = ('{0} {1}' -f $env:ImageOS, $env:ImageVersion).Trim() }
-        timingsSeconds = $timings
-        builtAtUtc = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-    })
+$buildState = [ordered]@{
+    nopCommerce = [ordered]@{ repository = $nop.repository; tag = $nop.tag; commit = $nop.commit }
+    configuration = 'Release'
+    siteDir = $SiteDir
+    site = [ordered]@{ files = $sorted.Count; bytes = $totalBytes; plugins = $pluginFolders.Count; manifest = 'legacy-site.sha256'; manifestSha256 = $siteDigest }
+    toolchain = [ordered]@{
+        msbuild = $msbuildVersion
+        nuget = $nugetVersion
+        referenceAssemblies = ('{0} {1}' -f $refPackage.id, $refPackage.version)
+        targetFrameworkRootPath = $targetFrameworkRoot
+        machineTargetingPack = $machinePackState
+    }
+    host = [ordered]@{ os = [System.Environment]::OSVersion.VersionString; image = ('{0} {1}' -f $env:ImageOS, $env:ImageVersion).Trim() }
+    timingsSeconds = $timings
+    builtAtUtc = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+}
+if ($patchRecord) { $buildState['patch'] = $patchRecord }
+Write-BenchState -WorkRoot $work -Name 'build' -Data $buildState
 
-Add-BenchSummary -Lines @(
-    '### Legacy build',
-    '',
-    '| | |',
-    '|---|---|',
-    ('| nopCommerce | `{0}` at `{1}` |' -f $nop.tag, $nop.commit),
-    ('| MSBuild / nuget.exe | {0} / {1} |' -f $msbuildVersion, $nugetVersion),
-    ('| Reference assemblies | {0} {1} (machine-wide {2} pack: {3}) |' -f $refPackage.id, $refPackage.version, $nop.targetFrameworkVersion, $machinePackState),
-    ('| Published site | {0} files, {1:N1} MB, {2} plugins |' -f $sorted.Count, ($totalBytes / 1MB), $pluginFolders.Count),
-    ('| Manifest SHA-256 | `{0}` |' -f $siteDigest),
-    ('| Seconds | {0} |' -f (($timings.Keys | ForEach-Object { '{0} {1}' -f $_, $timings[$_] }) -join ', ')),
-    ''
-)
+$summary = @('### Legacy build', '', '| | |', '|---|---|', ('| nopCommerce | `{0}` at `{1}` |' -f $nop.tag, $nop.commit))
+if ($patchRecord) {
+    $summary[0] = '### Mutant build (P9)'
+    $summary += ('| Patch | `{0}`, SHA-256 `{1}`: {2} (applied for the build, then restored) |' -f $patchRecord.file, $patchRecord.sha256, ($patchFiles -join ', '))
+}
+Add-BenchSummary -Lines ($summary + @(
+        ('| MSBuild / nuget.exe | {0} / {1} |' -f $msbuildVersion, $nugetVersion),
+        ('| Reference assemblies | {0} {1} (machine-wide {2} pack: {3}) |' -f $refPackage.id, $refPackage.version, $nop.targetFrameworkVersion, $machinePackState),
+        ('| Published site | {0} files, {1:N1} MB, {2} plugins |' -f $sorted.Count, ($totalBytes / 1MB), $pluginFolders.Count),
+        ('| Manifest SHA-256 | `{0}` |' -f $siteDigest),
+        ('| Seconds | {0} |' -f (($timings.Keys | ForEach-Object { '{0} {1}' -f $_, $timings[$_] }) -join ', ')),
+        ''
+    ))
 
 # The step succeeded; do not let the exit code of the last native command decide.
 exit 0

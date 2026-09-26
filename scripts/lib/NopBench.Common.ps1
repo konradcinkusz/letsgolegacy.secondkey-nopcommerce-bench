@@ -204,6 +204,113 @@ function Get-BenchSha256 {
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
+# --- Patches (P9 mutants, docs/P9-MUTANTS.md) ------------------------------------------
+# A mutant is a unified diff against the pinned checkout. nopCommerce keeps most of its
+# sources with CRLF line endings, and so do the patches (.gitattributes); git apply is
+# nevertheless told to ignore whitespace, so a patch whose line endings were converted on
+# the way still applies - and still has to match every line it changes.
+
+function Invoke-BenchPatchGit {
+    # git -C <SourceDir> <arguments>; returns the exit code and sends every line git
+    # writes, stderr included (which hunk failed, and where), to the log.
+    param(
+        [Parameter(Mandatory = $true)][string] $SourceDir,
+        [Parameter(Mandatory = $true)][string[]] $Arguments
+    )
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $output = @(& git -C $SourceDir @Arguments 2>&1)
+        $code = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previous
+    }
+    foreach ($line in $output) { if ("$line") { Write-BenchLog ('  git apply: {0}' -f $line) } }
+    return $code
+}
+
+function Get-BenchPatchFile {
+    # The files a patch changes (repository-relative, "/"-separated, ordinal order), read from
+    # the patch itself; nothing is applied.
+    param(
+        [Parameter(Mandatory = $true)][string] $SourceDir,
+        [Parameter(Mandatory = $true)][string] $Patch
+    )
+    $lines = @(Invoke-BenchGit -Arguments @('-C', $SourceDir, 'apply', '--numstat', $Patch))
+    $files = @($lines | Where-Object { "$_" } | ForEach-Object { ("$_" -split "`t", 3)[2] })
+    if ($files.Count -eq 0) { throw ('{0} changes no file.' -f $Patch) }
+    [System.Array]::Sort($files, [System.StringComparer]::Ordinal)
+    return , $files
+}
+
+function Get-BenchModifiedFile {
+    # The tracked files that differ from HEAD in a checkout, in the same form as
+    # Get-BenchPatchFile.
+    param([Parameter(Mandatory = $true)][string] $SourceDir)
+    $files = @(Invoke-BenchGit -Arguments @('-C', $SourceDir, 'diff', '--name-only', 'HEAD') | Where-Object { "$_" } | ForEach-Object { "$_" })
+    [System.Array]::Sort($files, [System.StringComparer]::Ordinal)
+    return , $files
+}
+
+function Test-BenchPatch {
+    # True when the patch applies to the checkout as it is; with -Reverse, when the checkout
+    # holds the whole patch (it would come out again cleanly). Nothing is changed.
+    param(
+        [Parameter(Mandatory = $true)][string] $SourceDir,
+        [Parameter(Mandatory = $true)][string] $Patch,
+        [switch] $Reverse
+    )
+    $arguments = @('apply', '--check', '--ignore-whitespace', '--whitespace=nowarn')
+    if ($Reverse) { $arguments += '--reverse' }
+    return ((Invoke-BenchPatchGit -SourceDir $SourceDir -Arguments ($arguments + @($Patch))) -eq 0)
+}
+
+function Add-BenchPatch {
+    # Applies a patch to a clean checkout and checks that it changed exactly the files the
+    # patch names. Throws, naming the patch, when it does not apply. Returns those files.
+    param(
+        [Parameter(Mandatory = $true)][string] $SourceDir,
+        [Parameter(Mandatory = $true)][string] $Patch
+    )
+    $files = Get-BenchPatchFile -SourceDir $SourceDir -Patch $Patch
+    if (-not (Test-BenchPatch -SourceDir $SourceDir -Patch $Patch)) {
+        throw ('{0} does not apply to the checkout at {1}: git apply --check refused it (the log above names the hunk). A patch is written against the pinned tree exactly as step 1 fetches it.' -f $Patch, $SourceDir)
+    }
+    if ((Invoke-BenchPatchGit -SourceDir $SourceDir -Arguments @('apply', '--ignore-whitespace', '--whitespace=nowarn', $Patch)) -ne 0) {
+        throw ('git apply {0} failed after its check passed.' -f $Patch)
+    }
+    Assert-BenchPatchedTree -SourceDir $SourceDir -Patch $Patch -Files $files
+    return , $files
+}
+
+function Assert-BenchPatchedTree {
+    # The checkout holds exactly the patch: the modified files are the patch's files, and the
+    # patch would come out again cleanly.
+    param(
+        [Parameter(Mandatory = $true)][string] $SourceDir,
+        [Parameter(Mandatory = $true)][string] $Patch,
+        [Parameter(Mandatory = $true)][string[]] $Files
+    )
+    $modified = Get-BenchModifiedFile -SourceDir $SourceDir
+    if (($modified -join "`n") -cne ($Files -join "`n")) {
+        throw ('The checkout does not hold exactly {0}: modified [{1}], the patch changes [{2}].' -f $Patch, ($modified -join ', '), ($Files -join ', '))
+    }
+    if (-not (Test-BenchPatch -SourceDir $SourceDir -Patch $Patch -Reverse)) {
+        throw ('The checkout no longer holds all of {0}.' -f $Patch)
+    }
+}
+
+function Undo-BenchPatch {
+    # Restores the files a patch changed from the checkout's own HEAD - whatever line endings
+    # the patch was applied with - so the tree is the pinned one again.
+    param(
+        [Parameter(Mandatory = $true)][string] $SourceDir,
+        [Parameter(Mandatory = $true)][string[]] $Files
+    )
+    $null = Invoke-BenchGit -Arguments (@('-C', $SourceDir, 'checkout', 'HEAD', '--') + $Files)
+}
+
 function Get-BenchVerifiedDownload {
     # Downloads $Uri to $Destination unless a file with the pinned SHA-256 is already
     # there (for example restored from the CI cache). Nothing unverified is ever kept.

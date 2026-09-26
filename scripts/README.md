@@ -66,6 +66,7 @@ Every value has a default; nothing is required.
 | `-Force` | 1 | off | Re-fetch even when a verified checkout exists. |
 | `-SourceDir` | 2 | from `state\fetch.json`, else `<work>\legacy-src` | Checkout to build. It must be a clean checkout of the pinned commit. |
 | `-SiteDir` | 2 | `<work>\legacy-site` | Publish target. Its content is replaced. |
+| `-Patch` | 2 | none | Build the pinned source with one patch applied: a P9 mutant ([below](#p9-mutants-mutants)). Applied before the build, checked before and after it, restored afterwards; recorded in `state\build.json`. Use a work root of its own. |
 | `-MSBuild` | 2 | `msbuild.exe` on `PATH`, else found with `vswhere` | MSBuild to use. |
 | `-NuGet` | 2 | `nuget.exe` on `PATH`, else the pinned `NuGet.CommandLine` | nuget.exe to use for `restore`. |
 | `-SkipIis`, `-SkipSql` | 3 | off | Leave that half alone (repairs). |
@@ -87,6 +88,7 @@ Every value has a default; nothing is required.
 | `-Pdf` | 9 | `auto` | `sk evidence --pdf`: `required` fails without a Chromium-based browser. |
 | `NOPBENCH_SK_SQL` | set by 8 for `sk` | built from `state\deploy.json` | The connection string of the snapshot reset ([`../contract/secondkey.yaml`](../contract/secondkey.yaml)); Windows authentication, no secret. |
 | `NOPBENCH_SK`, `NOPBENCH_PORTCULLIS` | steps that drive the chain | `<work>\tools\chain\secondkey\SecondKey.Cli.dll`, `<work>\tools\chain\portcullis\Portcullis.Cli.dll` | The chain's tools (below). |
+| `-MutantWorkRoot` / `NOPBENCH_MUTANT_WORK` | mutants 2 | a folder `nopmut` beside the work root | Where the mutant was built (steps 1 and 2 with `-WorkRoot`). |
 
 ## Hand-off files
 
@@ -106,6 +108,8 @@ then the default. You never have to remember where the last step put things.
 | `state\traffic.json` | step 7 | the recording's path and digest, scenario list with session ids and request counts, snapshot, the answers to the first request after each restore, the site manifest digest |
 | `state\replay.json` | step 8 | the run's path and digest, mode (A/A or legacy vs candidate), both URLs, scenario, result and reset counts, statuses |
 | `state\verdict.json` | step 9 | outcome, summary counts, the clauses that did not hold, the pack's files |
+| `state\mutant-deploy.json` | mutants 2 | the mutant deployed beside the legacy shop: id, patch and its SHA-256, URL, site, identity, the site manifest digest, the database it shares |
+| `state\mutant.json` | mutants 3 | killed or survived: the verdict's outcome, the regressions by reason, the clauses that regressed beside the ones expected to, the regressed exchanges by scenario |
 
 ## Recipes
 
@@ -171,6 +175,22 @@ Not steps: [`eshop/Reset-EShop.ps1`](eshop/Reset-EShop.ps1) restarts the applica
 and waits for the starting catalog (step 3 calls it before each scenario, `sk replay`
 before each scenario on each side); [`eshop/EShop.Scenarios.ps1`](eshop/EShop.Scenarios.ps1)
 holds the traffic.
+
+## P9 mutants: `mutants\`
+
+Defects put into the legacy shop on purpose, to show that the contract catches them
+([`../docs/P9-MUTANTS.md`](../docs/P9-MUTANTS.md): the rules, the method and the
+pre-registered set; the patches and their catalog are in [`../mutants/`](../mutants/)).
+A mutant is built by steps 1 and 2 in a work root of its own, with `-Patch`, and runs as a
+second IIS site beside the legacy shop, on its database. CI runs these in
+[`mutants.yml`](../.github/workflows/mutants.yml), one job per mutant.
+
+| Step | Script | Needs | Produces |
+|---|---|---|---|
+| 1 | [`mutants/1-check-mutants.ps1`](mutants/1-check-mutants.ps1) | anywhere; git with `-SourceDir` | the catalog checked, and with `-SourceDir` every patch against the pinned tree; the CI matrix |
+| 2 | [`mutants/2-deploy-mutant.ps1`](mutants/2-deploy-mutant.ps1) | elevated, after step 6 and **before step 7** (its database user must be in the snapshot) | IIS site `nopcommerce-mutant` on `http://localhost:8091/`, on the legacy database; `state\mutant-deploy.json` |
+| 3 | [`mutants/3-mutant-outcome.ps1`](mutants/3-mutant-outcome.ps1) | after `8-replay.ps1 -Candidate http://localhost:8091/` and step 9; anywhere | killed or survived; `state\mutant.json` |
+| 4 | [`mutants/4-collect-mutants.ps1`](mutants/4-collect-mutants.ps1) | the `mutant.json` of every mutant; anywhere | `mutants.json`: "N of 11 mutants killed", valid only when M00 passed |
 
 ## The P4 traffic set: `traffic\`
 

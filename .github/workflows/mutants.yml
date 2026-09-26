@@ -1,0 +1,343 @@
+# P9, killed mutants (docs/P9-MUTANTS.md). A mutant is the pinned nopCommerce with one
+# hand-written defect (mutants/*.patch, pre-registered in mutants/mutants.json). It runs as a
+# second IIS site on the legacy shop's database and is replayed against the legacy shop the
+# way the P7 candidate will be, and sk compare's verdict says whether the contract caught it:
+#   plan    (P9)  - the catalog checked, every patch checked against the pinned tree -> matrix;
+#   build   (P1)  - the legacy site, built once                          -> legacy-site;
+#   tools         - sk at its pinned commit (chain-tools.yml)            -> chain-tools;
+#   mutant  (P9)  - one Windows job per mutant: the mutant built (steps 1-2 with -Patch), the
+#                   legacy shop installed and configured (3-6), the mutant deployed beside it
+#                   on the same database (mutants/2), the traffic set recorded on the legacy
+#                   shop (7) and replayed legacy vs mutant (8)       -> mutant-<id>-replay;
+#   verdict (P9)  - one Linux job per mutant, file in, file out: sk compare and the pack (9),
+#                   killed or survived (mutants/3) -> mutant-<id>-evidence-pack, -outcome;
+#   summary (P9)  - every outcome in one file, "N of M killed" (mutants/4); M00, the
+#                   calibration, must pass or none of the run's results count -> mutants.
+# Every step calls a runbook script, so a person on a Windows machine runs exactly what CI
+# runs (docs/P9-MUTANTS.md, "One mutant by hand").
+name: mutants
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'mutants/**'
+      - 'scripts/mutants/**'
+      - '.github/workflows/mutants.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # Windows PowerShell 5.1 on the Windows jobs, as in legacy-build.yml.
+    shell: powershell
+
+jobs:
+  plan:
+    name: Check the mutant catalog and every patch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: pwsh
+    outputs:
+      matrix: ${{ steps.check.outputs.matrix }}
+    steps:
+      - name: Check out the bench
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set the work root
+        run: |
+          [System.IO.File]::AppendAllText($env:GITHUB_ENV, "NOPBENCH_WORK=$env:RUNNER_TEMP/nopbench`n")
+
+      - name: 1 - Fetch and verify the pinned nopCommerce
+        run: ./scripts/1-fetch-nopcommerce.ps1
+
+      - name: M1 - Check the catalog, and every patch against the pinned tree
+        id: check
+        run: ./scripts/mutants/1-check-mutants.ps1 -SourceDir "$env:NOPBENCH_WORK/legacy-src"
+
+  build:
+    # The legacy site, built once for every mutant job - as legacy-build.yml builds it.
+    name: Build nopCommerce (MSBuild, Release)
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - name: Check out the bench
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set the work root
+        run: |
+          [System.IO.File]::AppendAllText($env:GITHUB_ENV, "NOPBENCH_WORK=$env:RUNNER_TEMP\nopbench`n")
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
+
+      - name: Add nuget.exe to PATH
+        uses: NuGet/setup-nuget@fd55a6f3b34392fa83fde1454582407d8c714123 # v4.0
+        with:
+          nuget-version: '7.9.0'
+
+      - name: Cache pinned NuGet downloads
+        # Every file is re-verified against its pinned SHA-256 after restore.
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}\nopbench\downloads
+          key: legacy-build-downloads-${{ hashFiles('pins.json') }}
+
+      - name: 1 - Fetch and verify the pinned nopCommerce
+        run: .\scripts\1-fetch-nopcommerce.ps1
+
+      - name: 2 - Restore, build and publish (Release)
+        run: .\scripts\2-build-legacy.ps1
+
+      - name: Upload the published site
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: legacy-site
+          # Relative to the work root: legacy-site\ and state\ (the hand-off files).
+          path: |
+            ${{ runner.temp }}\nopbench\legacy-site
+            ${{ runner.temp }}\nopbench\state\build.json
+            ${{ runner.temp }}\nopbench\state\legacy-site.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  tools:
+    uses: ./.github/workflows/chain-tools.yml
+
+  mutant:
+    name: Mutant ${{ matrix.id }} (build it, legacy host, deploy beside it, record, replay)
+    needs: [plan, build, tools]
+    runs-on: windows-2022
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      MUTANT_ID: ${{ matrix.id }}
+      MUTANT_PATCH: ${{ matrix.patch }}
+    steps:
+      - name: Check out the bench
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set the work roots (the legacy shop's, and the mutant build's own)
+        # Short and outside the checkout, as in legacy-build.yml; the mutant is built in a work
+        # root of its own, so its state files never replace the legacy site's.
+        run: |
+          [System.IO.File]::AppendAllText($env:GITHUB_ENV, "NOPBENCH_WORK=$env:RUNNER_TEMP\nopbench`nNOPBENCH_MUTANT_WORK=$env:RUNNER_TEMP\nopmut`n")
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
+
+      - name: Add nuget.exe to PATH
+        uses: NuGet/setup-nuget@fd55a6f3b34392fa83fde1454582407d8c714123 # v4.0
+        with:
+          nuget-version: '7.9.0'
+
+      - name: Download the published legacy site
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: legacy-site
+          path: ${{ runner.temp }}\nopbench
+
+      - name: Download the chain's tools
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: chain-tools
+          path: ${{ runner.temp }}\nopbench\tools\chain
+
+      - name: Set up the .NET runtime for the chain's tools
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Cache pinned NuGet downloads (the mutant build)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}\nopmut\downloads
+          key: mutant-build-downloads-${{ hashFiles('pins.json') }}
+
+      - name: Cache the SQL Server media
+        # Re-verified against its pinned SHA-256 and Microsoft signature after restore.
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}\nopbench\downloads
+          key: legacy-iis-downloads-${{ hashFiles('pins.json') }}
+
+      - name: 1 - Fetch and verify the pinned nopCommerce (for the mutant)
+        run: .\scripts\1-fetch-nopcommerce.ps1 -WorkRoot $env:NOPBENCH_MUTANT_WORK
+
+      - name: 2 - Build the mutant (the pinned source with its patch; M00 without)
+        run: |
+          $build = @{ WorkRoot = $env:NOPBENCH_MUTANT_WORK; SiteDir = (Join-Path $env:NOPBENCH_MUTANT_WORK 'mutant-site') }
+          if ($env:MUTANT_PATCH) { $build['Patch'] = Join-Path 'mutants' $env:MUTANT_PATCH }
+          .\scripts\2-build-legacy.ps1 @build
+
+      - name: 3 - Enable IIS and install SQL Server Express
+        run: .\scripts\3-install-iis-sql.ps1
+
+      - name: 4 - Deploy the legacy site to IIS and run the nopCommerce installer
+        run: .\scripts\4-deploy-and-install.ps1
+
+      - name: 5 - Smoke test the legacy shop
+        run: .\scripts\5-smoke.ps1
+
+      - name: 6 - Configure the store (traffic plan section 2, through the admin UI)
+        run: .\scripts\6-configure-store.ps1
+
+      - name: M2 - Deploy the mutant beside the legacy shop, on its database
+        # Before step 7: the snapshot it takes must hold the mutant's database user.
+        run: .\scripts\mutants\2-deploy-mutant.ps1 -Id $env:MUTANT_ID
+
+      - name: 7 - Record the traffic set on the legacy shop (sk capture)
+        run: .\scripts\7-record-traffic.ps1
+
+      - name: 8 - Replay the traffic set, legacy vs mutant (sk replay)
+        run: .\scripts\8-replay.ps1 -Candidate http://localhost:8091/
+
+      - name: Upload the replay
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutant-${{ matrix.id }}-replay
+          # Relative to the work root, like legacy-build.yml's nopcommerce-replay.
+          path: |
+            ${{ runner.temp }}\nopbench\replay
+            ${{ runner.temp }}\nopbench\state\replay.json
+            ${{ runner.temp }}\nopbench\state\traffic.json
+            ${{ runner.temp }}\nopbench\state\mutant-deploy.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Collect diagnostics
+        if: failure()
+        run: .\scripts\collect-diagnostics.ps1
+
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutant-${{ matrix.id }}-diagnostics
+          path: |
+            ${{ runner.temp }}\nopbench\diagnostics
+            ${{ runner.temp }}\nopmut\logs
+          if-no-files-found: ignore
+          retention-days: 7
+
+  verdict:
+    # File in, file out, on Linux (docs/TOPOLOGY.md). Runs for every mutant whose replay exists,
+    # even when another mutant's job failed.
+    name: Verdict ${{ matrix.id }} (killed or survived)
+    needs: [plan, tools, mutant]
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.tools.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      MUTANT_ID: ${{ matrix.id }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out the bench
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set the work root
+        run: |
+          [System.IO.File]::AppendAllText($env:GITHUB_ENV, "NOPBENCH_WORK=$env:RUNNER_TEMP/nopbench`n")
+
+      - name: Download the chain's tools
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: chain-tools
+          path: ${{ runner.temp }}/nopbench/tools/chain
+
+      - name: Download the replay
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: mutant-${{ matrix.id }}-replay
+          path: ${{ runner.temp }}/nopbench
+
+      - name: Set up the .NET runtime for the chain's tools
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: 9 - Contract verdict and evidence pack
+        run: ./scripts/9-verdict.ps1 -Pdf required
+
+      - name: M3 - Killed or survived
+        run: ./scripts/mutants/3-mutant-outcome.ps1 -Id $env:MUTANT_ID
+
+      - name: Upload the evidence pack
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutant-${{ matrix.id }}-evidence-pack
+          path: ${{ runner.temp }}/nopbench/replay/evidence
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload the outcome
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutant-${{ matrix.id }}-outcome
+          path: ${{ runner.temp }}/nopbench/state/mutant.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  summary:
+    name: Killed mutants (M00, the calibration, must pass)
+    needs: [plan, verdict]
+    if: ${{ !cancelled() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out the bench
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set the work root
+        run: |
+          [System.IO.File]::AppendAllText($env:GITHUB_ENV, "NOPBENCH_WORK=$env:RUNNER_TEMP/nopbench`n")
+
+      - name: Download every outcome
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: mutant-*-outcome
+          path: ${{ runner.temp }}/outcomes
+
+      - name: M4 - Every outcome in one file
+        env:
+          BENCH_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: ./scripts/mutants/4-collect-mutants.ps1 -InputDir "$env:RUNNER_TEMP/outcomes" -Commit $env:BENCH_COMMIT
+
+      - name: Upload mutants.json
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutants
+          path: ${{ runner.temp }}/nopbench/mutants/mutants.json
+          if-no-files-found: ignore
+          retention-days: 30
