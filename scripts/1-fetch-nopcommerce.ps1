@@ -109,3 +109,6 @@ Write-BenchState -WorkRoot $work -Name 'fetch' -Data ([ordered]@{
         reused        = $reused
         verifiedAtUtc = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     })
+
+# The step succeeded; do not let the exit code of the last native command decide.
+exit 0

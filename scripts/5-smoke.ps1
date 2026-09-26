@@ -159,3 +159,6 @@ Add-BenchSummary -Lines $summary
 
 if ($failed.Count -gt 0) { throw ('{0} of {1} smoke checks failed.' -f $failed.Count, $results.Count) }
 Write-BenchLog ('All {0} smoke checks passed against {1}' -f $results.Count, $BaseUrl)
+
+# The step succeeded; do not let the exit code of the last native command decide.
+exit 0

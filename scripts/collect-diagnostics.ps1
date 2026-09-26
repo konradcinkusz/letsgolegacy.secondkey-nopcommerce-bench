@@ -97,7 +97,9 @@ Save-Section 'event logs' {
 Save-Section 'SQL Server logs' {
     $setupSummary = Get-ChildItem -Path (Join-Path $env:ProgramFiles 'Microsoft SQL Server\*\Setup Bootstrap\Log\Summary.txt') -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($setupSummary) { Copy-Item -LiteralPath $setupSummary.FullName -Destination (Join-Path $OutputDir 'sql-setup-summary.txt') }
-    $errorLog = Get-ChildItem -Path (Join-Path $env:ProgramFiles 'Microsoft SQL Server\MSSQL*.*\MSSQL\Log\ERRORLOG') -ErrorAction SilentlyContinue | Select-Object -First 1
+    $logPatterns = @(Join-Path $env:ProgramFiles 'Microsoft SQL Server\MSSQL*.*\MSSQL\Log\ERRORLOG')
+    $logPatterns += (Join-Path $work 'sqldata\MSSQL*.*\MSSQL\Log\ERRORLOG')
+    $errorLog = $logPatterns | ForEach-Object { Get-ChildItem -Path $_ -ErrorAction SilentlyContinue } | Select-Object -First 1
     if ($errorLog) { Copy-Item -LiteralPath $errorLog.FullName -Destination (Join-Path $OutputDir 'sql-errorlog.txt') }
 }
 
@@ -118,4 +120,16 @@ ELSE SELECT (SELECT TOP (50) CreatedOnUtc, LogLevelId, ShortMessage, PageUrl, Fu
     [System.IO.File]::WriteAllText((Join-Path $OutputDir 'nopcommerce-log.xml'), [string] $xml)
 }
 
+# The most telling excerpts also go to the job log, for readers without the artifact.
+foreach ($excerpt in @('sql-errorlog.txt', 'nopcommerce-log.xml')) {
+    $file = Join-Path $OutputDir $excerpt
+    if (Test-Path -LiteralPath $file) {
+        Enter-BenchGroup ('Excerpt: {0}' -f $excerpt)
+        Get-Content -LiteralPath $file -Tail 60 | Out-Host
+        Exit-BenchGroup
+    }
+}
 Write-BenchLog ('Diagnostics in {0}' -f $OutputDir)
+
+# Best effort by design: never fail the job a second time.
+exit 0

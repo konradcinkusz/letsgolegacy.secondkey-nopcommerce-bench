@@ -341,3 +341,6 @@ Add-BenchSummary -Lines @(
     ('| Seconds | {0} |' -f (($timings.Keys | ForEach-Object { '{0} {1}' -f $_, $timings[$_] }) -join ', ')),
     ''
 )
+
+# The step succeeded; do not let the exit code of the last native command decide.
+exit 0

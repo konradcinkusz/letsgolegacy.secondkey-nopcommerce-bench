@@ -68,6 +68,42 @@ $iisFeatures = @(
     'IIS-ASPNET45'
 )
 
+function Get-AtomicSectorSize {
+    # PhysicalBytesPerSectorForAtomicity of a volume, from fsutil. SQL Server cannot keep
+    # its files on a volume that reports more than 4096 bytes here (newer NVMe storage
+    # can), and its setup then fails with "Could not find the Database Engine startup
+    # handle". Returns 0 when fsutil cannot tell.
+    param([string] $Drive)
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try { $lines = @(& fsutil.exe fsinfo sectorinfo $Drive) } finally { $ErrorActionPreference = $previous }
+    $summary = ($lines | Where-Object { $_ -match 'BytesPerSector' } | ForEach-Object { ($_ -replace '\s+', ' ').Trim() }) -join '; '
+    Write-BenchLog ('Sector sizes of {0}: {1}' -f $Drive, $summary)
+    foreach ($line in $lines) {
+        if ($line -match '^\s*PhysicalBytesPerSectorForAtomicity\s*:\s*(\d+)') { return [int] $Matches[1] }
+    }
+    return 0
+}
+
+function Write-SqlStartupDiagnostic {
+    # Setup prints its own summary; why the engine would not start is in the instance's
+    # error log, wherever the data directory put it.
+    param([string] $Instance, [string] $DataDir)
+    $candidates = @(Join-Path $env:ProgramFiles ('Microsoft SQL Server\MSSQL*.{0}\MSSQL\Log\ERRORLOG' -f $Instance))
+    if ($DataDir) { $candidates += (Join-Path $DataDir ('MSSQL*.{0}\MSSQL\Log\ERRORLOG' -f $Instance)) }
+    $errorLog = $candidates | ForEach-Object { Get-ChildItem -Path $_ -ErrorAction SilentlyContinue } | Select-Object -First 1
+    if ($errorLog) {
+        Write-BenchLog ('Last lines of {0}:' -f $errorLog.FullName)
+        Get-Content -LiteralPath $errorLog.FullName -Tail 60 | Out-Host
+    }
+    else {
+        Write-BenchLog 'No SQL Server ERRORLOG was written: the engine never started.'
+    }
+    Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = (Get-Date).AddHours(-1) } -MaxEvents 200 -ErrorAction SilentlyContinue |
+        Where-Object { $_.ProviderName -like 'MSSQL*' -and $_.Level -le 3 } | Select-Object -First 10 |
+        ForEach-Object { Write-BenchLog ('Event {0} {1}: {2}' -f $_.ProviderName, $_.Id, ($_.Message -replace '\s+', ' ')) }
+}
+
 # --- IIS ----------------------------------------------------------------------------
 $iisState = 'skipped'
 if (-not $SkipIis) {
@@ -102,6 +138,7 @@ $instance = $sqlPin.instanceName
 $serviceName = 'MSSQL${0}' -f $instance
 $serverName = '.\{0}' -f $instance
 $sqlState = 'skipped'
+$dataDir = $null
 $sqlVersion = $null
 $sqlCollation = $null
 if (-not $SkipSql) {
@@ -129,6 +166,23 @@ if (-not $SkipSql) {
         $setup = Join-Path $extractDir 'SETUP.EXE'
         if (-not (Test-Path -LiteralPath $setup)) { throw ('{0} not found after extraction.' -f $setup) }
 
+        # Keep the data files on the system drive unless it reports sectors SQL Server
+        # cannot use; then put them under the work root if that drive can.
+        $dataDir = $null
+        $systemSector = Get-AtomicSectorSize -Drive $env:SystemDrive
+        if ($systemSector -gt 4096) {
+            $workDrive = Split-Path -Qualifier $work
+            $workSector = Get-AtomicSectorSize -Drive $workDrive
+            if ($workDrive -ne $env:SystemDrive -and $workSector -gt 0 -and $workSector -le 4096) {
+                $dataDir = Join-Path $work 'sqldata'
+                $null = New-Item -ItemType Directory -Force -Path $dataDir
+                Write-BenchLog ('{0} reports {1}-byte atomic sectors, which SQL Server cannot use; data files go to {2}.' -f $env:SystemDrive, $systemSector, $dataDir)
+            }
+            else {
+                throw ('{0} reports {1}-byte atomic sectors, which SQL Server cannot use, and no other drive qualifies. Set ForcedPhysicalSectorSizeInBytes as described in https://learn.microsoft.com/troubleshoot/sql/database-engine/database-file-operations/troubleshoot-os-4kb-disk-sector-size and restart.' -f $env:SystemDrive, $systemSector)
+            }
+        }
+
         # RebootRequiredCheck is skipped because enabling IIS a minute earlier may leave
         # a restart pending that has nothing to do with SQL Server.
         $setupArguments = @(
@@ -141,12 +195,14 @@ if (-not $SkipSql) {
             '/UPDATEENABLED=False',
             '/SKIPRULES=RebootRequiredCheck'
         )
+        if ($dataDir) { $setupArguments += ('/INSTALLSQLDATADIR="{0}"' -f $dataDir) }
         Write-BenchLog ('> {0} {1}' -f $setup, ($setupArguments -join ' '))
         $process = Start-Process -FilePath $setup -ArgumentList $setupArguments -Wait -PassThru -NoNewWindow
         $setupCode = $process.ExitCode
-        $summary = Get-ChildItem -Path (Join-Path $env:ProgramFiles 'Microsoft SQL Server\*\Setup Bootstrap\Log\Summary.txt') -ErrorAction SilentlyContinue | Select-Object -First 1
         if (@(0, 3010) -notcontains $setupCode) {
-            if ($summary) { Get-Content -LiteralPath $summary.FullName | Out-Host }
+            # Setup has already printed its summary. What it does not show is why the
+            # engine would not start: that is in the instance's own error log.
+            Write-SqlStartupDiagnostic -Instance $instance -DataDir $dataDir
             throw ('SQL Server setup failed with exit code {0}.' -f $setupCode)
         }
         Write-BenchLog ('SQL Server setup finished with exit code {0}.' -f $setupCode)
@@ -169,7 +225,7 @@ $timings['sql'] = [math]::Round($clock.Elapsed.TotalSeconds, 1)
 
 Write-BenchState -WorkRoot $work -Name 'platform' -Data ([ordered]@{
         iis = [ordered]@{ state = $iisState; features = $iisFeatures }
-        sqlServer = [ordered]@{ state = $sqlState; server = $serverName; service = $serviceName; version = $sqlVersion; collation = $sqlCollation }
+        sqlServer = [ordered]@{ state = $sqlState; server = $serverName; service = $serviceName; version = $sqlVersion; collation = $sqlCollation; dataDirectory = $dataDir }
         timingsSeconds = $timings
         preparedAtUtc = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     })
@@ -184,3 +240,6 @@ Add-BenchSummary -Lines @(
     ('| Seconds | IIS {0}, SQL Server {1} |' -f $timings['iis'], $timings['sql']),
     ''
 )
+
+# The step succeeded; do not let the exit code of the last native command decide.
+exit 0
