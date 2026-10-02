@@ -27,7 +27,7 @@
     The administrator account the installer creates gets a password generated for this
     run (or taken from NOPBENCH_ADMIN_PASSWORD). It is masked in CI logs, never printed,
     and written only to <WorkRoot>\secrets\legacy-admin.json, readable by the current
-    user and Administrators, outside the repository.
+    user, Administrators and SYSTEM, outside the repository.
 
     Needs an elevated PowerShell on Windows, after steps 2 and 3.
 
@@ -293,7 +293,7 @@ $secretJson = ([ordered]@{ url = ($baseUrl + 'admin'); email = $AdminEmail; pass
 [System.IO.File]::WriteAllText($secretsFile, $secretJson, (New-Object System.Text.UTF8Encoding($false)))
 $me = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 Invoke-BenchNative -FilePath (Join-Path $env:windir 'System32\icacls.exe') -ArgumentList @($secretsFile, '/inheritance:r', '/grant:r', ('{0}:F' -f $me), '*S-1-5-32-544:F', '*S-1-5-18:F', '/Q')
-Write-BenchLog ('Administrator credentials for this run: {0} (current user and Administrators only)' -f $secretsFile)
+Write-BenchLog ('Administrator credentials for this run: {0} (current user, Administrators and SYSTEM only)' -f $secretsFile)
 
 Write-BenchState -WorkRoot $work -Name 'deploy' -Data ([ordered]@{
         url = $baseUrl
