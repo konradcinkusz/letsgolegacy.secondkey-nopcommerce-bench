@@ -1,8 +1,10 @@
 # Demo topology — decision D7 (proposed)
 
-> **Status: proposed.** The legacy half is built and running in CI (P1, P2). The parts
-> marked *planned* describe how P4–P7 are expected to plug in; their tickets may refine
-> them, and should update this page when they do.
+> **Status: proposed** (decision D7 is the owner's). What it describes runs in CI: the
+> legacy half (P1, P2), capture and the A/A replay on the Windows runner (P4, P5), the
+> verdict and the pack on Linux, and the P9 mutants as a second site beside the legacy
+> shop. The part still marked *planned* is the migrated candidate (P7); its ticket should
+> update this page when it lands.
 
 ## The decision
 
@@ -100,7 +102,7 @@ running application on the Windows runner, everything that is file in, file out 
 ([ADR 0004](adr/0004-chain-tools-and-eshop-warmup.md)).
 
 GitHub-hosted runners do not share a network: a job on a Linux runner cannot reach IIS
-on a Windows runner. That is why capture and replay are planned **inside the Windows
+on a Windows runner. That is why capture and replay run **inside the Windows
 job**, next to IIS — `sk` is cross-platform .NET 10, so running it on Windows costs
 nothing. What they produce (`*.skcap`, `*.skrun`) leaves the job as an artifact, and the
 file-in/file-out steps (contract checks, compare, evidence) run on a Linux job.

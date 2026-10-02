@@ -17,7 +17,7 @@ gitleaks protect --staged --redact --config "$REPO_ROOT/.gitleaks.toml" || {
 
 pre-commit: a staged change looks like a credential.
 
-If it IS one: unstage it and read it from the environment instead (P5).
+If it IS one: unstage it and read it from the environment instead (architecture principle P5).
 
 If it is NOT one (sample data that must look like a secret): add the path or shape to the
 [allowlist] in .gitleaks.toml in the same commit, so the exemption is reviewable.

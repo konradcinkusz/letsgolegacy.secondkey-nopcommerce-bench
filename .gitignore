@@ -23,7 +23,7 @@ coverage/
 *.coveragexml
 StrykerOutput/
 
-# Local secrets (P5): only the committed example file is tracked
+# Local secrets (architecture principle P5): only the committed example file is tracked
 .env
 .env.*
 !.env.example

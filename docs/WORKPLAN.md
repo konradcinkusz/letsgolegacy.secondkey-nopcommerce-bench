@@ -26,7 +26,7 @@ is marked as human work.
 | P7 | Replay and compare legacy vs candidate; diffs reviewed | `verdict.json` exists, and the NLS → ICU difference is found or its absence documented | planned |
 | P8 | Portcullis migration rules run on the candidate PR (R2, R3) | SARIF is attached to the pack | planned |
 | P9 | Publish the evidence pack, the contract and the numbers (scenarios, diffs, regressions, killed mutants) | Public and linked from both decks | in progress: killed mutants done (#8), **11 of 11**. Open: the candidate's evidence pack, diffs and regressions (after P6–P8, none done yet), the links from both decks |
-| P10 | Onboarding-hours log for P4–P7 | The hours are in the published report | planned |
+| P10 | Onboarding-hours log for P4–P7 | The hours are in the published report | in progress: the log exists (#3); agent hours through P5 and for P9's mutants are in it, the later ones estimated after the fact; human hours none yet |
 
 What the tickets produced, as CI recorded it: [`results/p3`](../results/p3/README.md) — the
 warm-up's pack; [`results/p4`](../results/p4/README.md) — the nopCommerce traffic set,
