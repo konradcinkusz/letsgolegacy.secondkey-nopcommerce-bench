@@ -1,0 +1,13 @@
+diff --git a/src/Libraries/Nop.Services/Orders/ShoppingCartService.cs b/src/Libraries/Nop.Services/Orders/ShoppingCartService.cs
+index 593ca52..f5bc1ab 100644
+--- a/src/Libraries/Nop.Services/Orders/ShoppingCartService.cs
++++ b/src/Libraries/Nop.Services/Orders/ShoppingCartService.cs
+@@ -401,8 +401,6 @@ namespace Nop.Services.Orders
+                                                 productAvailabilityRange.GetLocalized(range => range.Name));
+                                         warnings.Add(warning);
+                                     }
+-                                    else
+-                                        warnings.Add(string.Format(_localizationService.GetResource("ShoppingCart.QuantityExceedsStock"), maximumQuantityCanBeAdded));
+                                 }
+                             }
+                         }

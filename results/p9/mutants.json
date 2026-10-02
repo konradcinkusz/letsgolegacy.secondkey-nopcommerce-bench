@@ -1,0 +1,2863 @@
+{
+  "kind": "nopbench.p9.mutants",
+  "v": 1,
+  "headline": "11 of 11 mutants killed",
+  "valid": true,
+  "counts": {
+    "mutants": 11,
+    "killed": 11,
+    "survived": 0,
+    "noResult": 0
+  },
+  "calibration": {
+    "id": "M00",
+    "verdictOutcome": "pass",
+    "passed": true
+  },
+  "run": {
+    "url": "https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36262958486",
+    "benchCommit": "5f902272f9b924184c3a3614497d66df2a20cd4d"
+  },
+  "nopCommerce": {
+    "tag": "release-3.90",
+    "commit": "12d1f0139149a9d6e84964d325d62bae6ac748f6"
+  },
+  "catalogSha256": "809af3efdb9466a4182947f327f4a9fcf3284d695d06337e61e5ba94b073c446",
+  "mutants": [
+    {
+      "id": "M00",
+      "title": "Calibration: no source change",
+      "patch": null,
+      "intendedClauses": [],
+      "outcome": "calibration pass",
+      "verdictOutcome": "pass",
+      "regressions": 0,
+      "regressedClauses": [],
+      "uncoveredDifferences": 0,
+      "intendedClauseStatus": {},
+      "otherRegressedClauses": [],
+      "regressionsByClause": 0,
+      "missingAnswers": 0,
+      "fixCandidates": 0,
+      "exchanges": 290,
+      "scenarios": 38,
+      "regressedExchanges": [],
+      "verdictSha256": "7cefc882855d5babbb44324c20d541bd91bcf115bea1741d4620a28aae37627f",
+      "runUrl": "https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36262958486"
+    },
+    {
+      "id": "M01",
+      "title": "Free shipping from exactly the threshold",
+      "patch": "M01-free-shipping-at-the-threshold.patch",
+      "intendedClauses": [
+        "NO-FREE-SHIPPING-AT-EXACTLY-1000"
+      ],
+      "outcome": "killed",
+      "verdictOutcome": "fail",
+      "regressions": 7,
+      "regressedClauses": [
+        "NO-FREE-SHIPPING-AT-EXACTLY-1000"
+      ],
+      "uncoveredDifferences": 6,
+      "intendedClauseStatus": {
+        "NO-FREE-SHIPPING-AT-EXACTLY-1000": "regressed"
+      },
+      "otherRegressedClauses": [],
+      "regressionsByClause": 1,
+      "missingAnswers": 0,
+      "fixCandidates": 0,
+      "exchanges": 290,
+      "scenarios": 38,
+      "regressedExchanges": [
+        {
+          "exchange": "ex-000036",
+          "scenario": "T11",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartShipping",
+            "extract.cartTotal"
+          ]
+        },
+        {
+          "exchange": "ex-000039",
+          "scenario": "T12",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartShipping",
+            "extract.cartTotal"
+          ]
+        },
+        {
+          "exchange": "ex-000042",
+          "scenario": "T12B",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartShipping",
+            "extract.cartTotal"
+          ]
+        },
+        {
+          "exchange": "ex-000043",
+          "scenario": "T12B",
+          "request": "POST /cart?probe=T12B",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartShipping",
+            "extract.cartTotal"
+          ]
+        },
+        {
+          "exchange": "ex-000233",
+          "scenario": "T26",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartShipping",
+            "extract.cartTotal"
+          ]
+        },
+        {
+          "exchange": "ex-000235",
+          "scenario": "T26",
+          "request": "POST /cart/estimateshipping?probe=T26-1000",
+          "reasons": [
+            "clause-regression: NO-FREE-SHIPPING-AT-EXACTLY-1000"
+          ],
+          "differences": [
+            "extract.shippingEstimates[0]",
+            "extract.shippingEstimates[1]",
+            "extract.shippingEstimates[2]"
+          ]
+        },
+        {
+          "exchange": "ex-000258",
+          "scenario": "T28",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartShipping",
+            "extract.cartTotal"
+          ]
+        }
+      ],
+      "verdictSha256": "4fc552510525087979ee168380883c731a04d3cf8231110e2283d053a0150a02",
+      "runUrl": "https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36262958486"
+    },
+    {
+      "id": "M02",
+      "title": "Coupon code matched case-sensitively",
+      "patch": "M02-coupon-code-case-sensitive.patch",
+      "intendedClauses": [
+        "COUPON-TRIMMED-AND-CASE-INSENSITIVE"
+      ],
+      "outcome": "killed",
+      "verdictOutcome": "fail",
+      "regressions": 14,
+      "regressedClauses": [
+        "SAVE10-TAKES-10-PERCENT-OF-SUBTOTAL",
+        "COUPON-TRIMMED-AND-CASE-INSENSITIVE",
+        "TAKE50-CAPPED-AT-ORDER-TOTAL",
+        "PCT20MAX100-STOPS-AT-MAXIMUM",
+        "SHIPFREE-ZEROES-SHIPPING",
+        "MEMBERS15-FOR-A-REGISTERED-CUSTOMER",
+        "ONCE5-REFUSED-THE-SECOND-TIME",
+        "REGISTERED-ORDER-TOTALS",
+        "NEVER-A-SERVER-ERROR"
+      ],
+      "uncoveredDifferences": 2,
+      "intendedClauseStatus": {
+        "COUPON-TRIMMED-AND-CASE-INSENSITIVE": "regressed"
+      },
+      "otherRegressedClauses": [
+        "SAVE10-TAKES-10-PERCENT-OF-SUBTOTAL",
+        "TAKE50-CAPPED-AT-ORDER-TOTAL",
+        "PCT20MAX100-STOPS-AT-MAXIMUM",
+        "SHIPFREE-ZEROES-SHIPPING",
+        "MEMBERS15-FOR-A-REGISTERED-CUSTOMER",
+        "ONCE5-REFUSED-THE-SECOND-TIME",
+        "REGISTERED-ORDER-TOTALS",
+        "NEVER-A-SERVER-ERROR"
+      ],
+      "regressionsByClause": 12,
+      "missingAnswers": 0,
+      "fixCandidates": 0,
+      "exchanges": 290,
+      "scenarios": 38,
+      "regressedExchanges": [
+        {
+          "exchange": "ex-000037",
+          "scenario": "T11",
+          "request": "POST /cart?probe=T11",
+          "reasons": [
+            "clause-regression: SAVE10-TAKES-10-PERCENT-OF-SUBTOTAL",
+            "clause-regression: NEVER-A-SERVER-ERROR"
+          ],
+          "differences": [
+            "extract.cartLineTotals[0]",
+            "extract.cartProducts[0]",
+            "extract.cartQuantities[0]",
+            "extract.cartSubtotal",
+            "extract.cartSubtotalDiscount",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices[0]",
+            "extract.couponMessages[0]",
+            "response.status"
+          ]
+        },
+        {
+          "exchange": "ex-000040",
+          "scenario": "T12",
+          "request": "POST /cart?probe=T12",
+          "reasons": [
+            "clause-regression: COUPON-TRIMMED-AND-CASE-INSENSITIVE"
+          ],
+          "differences": [
+            "extract.cartSubtotalDiscount",
+            "extract.couponMessages[0]"
+          ]
+        },
+        {
+          "exchange": "ex-000061",
+          "scenario": "T14",
+          "request": "POST /cart?probe=T14",
+          "reasons": [
+            "clause-regression: TAKE50-CAPPED-AT-ORDER-TOTAL",
+            "clause-regression: NEVER-A-SERVER-ERROR"
+          ],
+          "differences": [
+            "extract.cartLineTotals[0]",
+            "extract.cartProducts[0]",
+            "extract.cartQuantities[0]",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartTotalDiscount",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices[0]",
+            "extract.couponMessages[0]",
+            "response.status"
+          ]
+        },
+        {
+          "exchange": "ex-000065",
+          "scenario": "T15",
+          "request": "POST /cart?probe=T15",
+          "reasons": [
+            "clause-regression: PCT20MAX100-STOPS-AT-MAXIMUM",
+            "clause-regression: NEVER-A-SERVER-ERROR"
+          ],
+          "differences": [
+            "extract.cartLineTotals[0]",
+            "extract.cartProducts[0]",
+            "extract.cartQuantities[0]",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartSubtotalDiscount",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices[0]",
+            "extract.couponMessages[0]",
+            "response.status"
+          ]
+        },
+        {
+          "exchange": "ex-000078",
+          "scenario": "T16",
+          "request": "POST /cart?probe=T16",
+          "reasons": [
+            "clause-regression: SHIPFREE-ZEROES-SHIPPING",
+            "clause-regression: NEVER-A-SERVER-ERROR"
+          ],
+          "differences": [
+            "extract.cartLineTotals[0]",
+            "extract.cartProducts[0]",
+            "extract.cartQuantities[0]",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices[0]",
+            "extract.couponMessages[0]",
+            "response.status"
+          ]
+        },
+        {
+          "exchange": "ex-000092",
+          "scenario": "T18B",
+          "request": "POST /cart?probe=T18B",
+          "reasons": [
+            "clause-regression: MEMBERS15-FOR-A-REGISTERED-CUSTOMER",
+            "clause-regression: NEVER-A-SERVER-ERROR"
+          ],
+          "differences": [
+            "extract.cartLineTotals[0]",
+            "extract.cartProducts[0]",
+            "extract.cartQuantities[0]",
+            "extract.cartSubtotal",
+            "extract.cartSubtotalDiscount",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices[0]",
+            "extract.couponMessages[0]",
+            "response.status"
+          ]
+        },
+        {
+          "exchange": "ex-000098",
+          "scenario": "T19",
+          "request": "POST /cart",
+          "reasons": [
+            "clause-regression: NEVER-A-SERVER-ERROR"
+          ],
+          "differences": [
+            "extract.cartLineTotals[0]",
+            "extract.cartProducts[0]",
+            "extract.cartQuantities[0]",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotalDiscount",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices[0]",
+            "extract.couponMessages[0]",
+            "response.status"
+          ]
+        },
+        {
+          "exchange": "ex-000099",
+          "scenario": "T19",
+          "request": "GET /cart",
+          "reasons": [
+            "clause-regression: NEVER-A-SERVER-ERROR"
+          ],
+          "differences": [
+            "extract.cartLineTotals[0]",
+            "extract.cartProducts[0]",
+            "extract.cartQuantities[0]",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotalDiscount",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices[0]",
+            "response.status"
+          ]
+        },
+        {
+          "exchange": "ex-000106",
+          "scenario": "T19",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.error",
+            "response.body.json.goto_section",
+            "response.body.json.message",
+            "response.body.json.update_section"
+          ]
+        },
+        {
+          "exchange": "ex-000111",
+          "scenario": "T19",
+          "request": "POST /cart?probe=T19",
+          "reasons": [
+            "clause-regression: ONCE5-REFUSED-THE-SECOND-TIME",
+            "clause-regression: NEVER-A-SERVER-ERROR"
+          ],
+          "differences": [
+            "extract.cartLineTotals[0]",
+            "extract.cartProducts[0]",
+            "extract.cartQuantities[0]",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices[0]",
+            "extract.couponMessages[0]",
+            "response.status"
+          ]
+        },
+        {
+          "exchange": "ex-000259",
+          "scenario": "T28",
+          "request": "POST /cart",
+          "reasons": [
+            "clause-regression: NEVER-A-SERVER-ERROR"
+          ],
+          "differences": [
+            "extract.cartLineTotals[0]",
+            "extract.cartProducts[0]",
+            "extract.cartQuantities[0]",
+            "extract.cartSubtotal",
+            "extract.cartSubtotalDiscount",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices[0]",
+            "extract.couponMessages[0]",
+            "response.status"
+          ]
+        },
+        {
+          "exchange": "ex-000260",
+          "scenario": "T28",
+          "request": "GET /cart",
+          "reasons": [
+            "clause-regression: NEVER-A-SERVER-ERROR"
+          ],
+          "differences": [
+            "extract.cartLineTotals[0]",
+            "extract.cartProducts[0]",
+            "extract.cartQuantities[0]",
+            "extract.cartSubtotal",
+            "extract.cartSubtotalDiscount",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices[0]",
+            "response.status"
+          ]
+        },
+        {
+          "exchange": "ex-000269",
+          "scenario": "T28",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.error",
+            "response.body.json.goto_section",
+            "response.body.json.message",
+            "response.body.json.update_section"
+          ]
+        },
+        {
+          "exchange": "ex-000272",
+          "scenario": "T28",
+          "request": "GET /orderdetails/6?probe=T28",
+          "reasons": [
+            "clause-regression: REGISTERED-ORDER-TOTALS"
+          ],
+          "differences": [
+            "extract.orderTotals[1]",
+            "extract.orderTotals[2]",
+            "extract.orderTotals[3]",
+            "extract.orderTotals[4]"
+          ]
+        }
+      ],
+      "verdictSha256": "3b405aab5c13d5cdba06aad572c6efc0387941d1011a237e632773787fb09506",
+      "runUrl": "https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36262958486"
+    },
+    {
+      "id": "M03",
+      "title": "Maximum discount amount ignored",
+      "patch": "M03-maximum-discount-amount-dropped.patch",
+      "intendedClauses": [
+        "PCT20MAX100-STOPS-AT-MAXIMUM"
+      ],
+      "outcome": "killed",
+      "verdictOutcome": "fail",
+      "regressions": 1,
+      "regressedClauses": [
+        "PCT20MAX100-STOPS-AT-MAXIMUM"
+      ],
+      "uncoveredDifferences": 0,
+      "intendedClauseStatus": {
+        "PCT20MAX100-STOPS-AT-MAXIMUM": "regressed"
+      },
+      "otherRegressedClauses": [],
+      "regressionsByClause": 1,
+      "missingAnswers": 0,
+      "fixCandidates": 0,
+      "exchanges": 290,
+      "scenarios": 38,
+      "regressedExchanges": [
+        {
+          "exchange": "ex-000065",
+          "scenario": "T15",
+          "request": "POST /cart?probe=T15",
+          "reasons": [
+            "clause-regression: PCT20MAX100-STOPS-AT-MAXIMUM"
+          ],
+          "differences": [
+            "extract.cartSubtotalDiscount",
+            "extract.cartTotal"
+          ]
+        }
+      ],
+      "verdictSha256": "e01393a95cf5b359019c979eda6435fa37f302cc4a941daaf7beda62a44c3ce1",
+      "runUrl": "https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36262958486"
+    },
+    {
+      "id": "M04",
+      "title": "Order total no longer bounded by the order",
+      "patch": "M04-order-total-not-bounded.patch",
+      "intendedClauses": [
+        "TAKE50-CAPPED-AT-ORDER-TOTAL",
+        "CART-TOTAL-NEVER-NEGATIVE"
+      ],
+      "outcome": "killed",
+      "verdictOutcome": "fail",
+      "regressions": 1,
+      "regressedClauses": [
+        "TAKE50-CAPPED-AT-ORDER-TOTAL",
+        "CART-TOTAL-NEVER-NEGATIVE"
+      ],
+      "uncoveredDifferences": 0,
+      "intendedClauseStatus": {
+        "TAKE50-CAPPED-AT-ORDER-TOTAL": "regressed",
+        "CART-TOTAL-NEVER-NEGATIVE": "regressed"
+      },
+      "otherRegressedClauses": [],
+      "regressionsByClause": 1,
+      "missingAnswers": 0,
+      "fixCandidates": 0,
+      "exchanges": 290,
+      "scenarios": 38,
+      "regressedExchanges": [
+        {
+          "exchange": "ex-000061",
+          "scenario": "T14",
+          "request": "POST /cart?probe=T14",
+          "reasons": [
+            "clause-regression: TAKE50-CAPPED-AT-ORDER-TOTAL",
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE"
+          ],
+          "differences": [
+            "extract.cartTotal",
+            "extract.cartTotalDiscount",
+            "extractErrors"
+          ]
+        }
+      ],
+      "verdictSha256": "849141f05bde894f4137217f8eb161e8dad9703cfd151f12a2a4d9ef3837f640",
+      "runUrl": "https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36262958486"
+    },
+    {
+      "id": "M05",
+      "title": "Tax from the shipping address instead of the billing address",
+      "patch": "M05-tax-from-the-shipping-address.patch",
+      "intendedClauses": [
+        "TAX-FOLLOWS-BILLING-ADDRESS"
+      ],
+      "outcome": "killed",
+      "verdictOutcome": "fail",
+      "regressions": 2,
+      "regressedClauses": [
+        "TAX-FOLLOWS-BILLING-ADDRESS"
+      ],
+      "uncoveredDifferences": 1,
+      "intendedClauseStatus": {
+        "TAX-FOLLOWS-BILLING-ADDRESS": "regressed"
+      },
+      "otherRegressedClauses": [],
+      "regressionsByClause": 1,
+      "missingAnswers": 0,
+      "fixCandidates": 0,
+      "exchanges": 290,
+      "scenarios": 38,
+      "regressedExchanges": [
+        {
+          "exchange": "ex-000211",
+          "scenario": "T22F",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000212",
+          "scenario": "T22F",
+          "request": "GET /cart?probe=T22F",
+          "reasons": [
+            "clause-regression: TAX-FOLLOWS-BILLING-ADDRESS"
+          ],
+          "differences": [
+            "extract.cartTax",
+            "extract.cartTotal"
+          ]
+        }
+      ],
+      "verdictSha256": "b14940bda6e31f323fcc6e3dd6c49c17bcac1d4e06b94db08f0d37f9090f7d2e",
+      "runUrl": "https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36262958486"
+    },
+    {
+      "id": "M06",
+      "title": "Tax zip match made case-sensitive",
+      "patch": "M06-tax-zip-match-case-sensitive.patch",
+      "intendedClauses": [
+        "TAX-ZIP-MATCH-IGNORES-CASE"
+      ],
+      "outcome": "killed",
+      "verdictOutcome": "fail",
+      "regressions": 2,
+      "regressedClauses": [
+        "TAX-ZIP-MATCH-IGNORES-CASE"
+      ],
+      "uncoveredDifferences": 1,
+      "intendedClauseStatus": {
+        "TAX-ZIP-MATCH-IGNORES-CASE": "regressed"
+      },
+      "otherRegressedClauses": [],
+      "regressionsByClause": 1,
+      "missingAnswers": 0,
+      "fixCandidates": 0,
+      "exchanges": 290,
+      "scenarios": 38,
+      "regressedExchanges": [
+        {
+          "exchange": "ex-000184",
+          "scenario": "T23",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000185",
+          "scenario": "T23",
+          "request": "GET /cart?probe=T23",
+          "reasons": [
+            "clause-regression: TAX-ZIP-MATCH-IGNORES-CASE"
+          ],
+          "differences": [
+            "extract.cartTax",
+            "extract.cartTotal"
+          ]
+        }
+      ],
+      "verdictSha256": "f2f6aeefce6b4b06de3e6b152e5b7e1551c9b3ab1bccd8a98f595db3b9695c28",
+      "runUrl": "https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36262958486"
+    },
+    {
+      "id": "M07",
+      "title": "Order details served without the owner check",
+      "patch": "M07-order-details-without-owner-check.patch",
+      "intendedClauses": [
+        "OTHERS-ORDER-NEVER-SHOWN",
+        "OTHERS-ORDER-NEVER-NAMES-ITS-OWNER",
+        "OTHERS-ORDER-SENDS-TO-LOGIN"
+      ],
+      "outcome": "killed",
+      "verdictOutcome": "fail",
+      "regressions": 2,
+      "regressedClauses": [
+        "OTHERS-ORDER-NEVER-SHOWN",
+        "OTHERS-ORDER-NEVER-NAMES-ITS-OWNER",
+        "OTHERS-ORDER-SENDS-TO-LOGIN"
+      ],
+      "uncoveredDifferences": 0,
+      "intendedClauseStatus": {
+        "OTHERS-ORDER-NEVER-SHOWN": "regressed",
+        "OTHERS-ORDER-NEVER-NAMES-ITS-OWNER": "regressed",
+        "OTHERS-ORDER-SENDS-TO-LOGIN": "regressed"
+      },
+      "otherRegressedClauses": [],
+      "regressionsByClause": 2,
+      "missingAnswers": 0,
+      "fixCandidates": 0,
+      "exchanges": 290,
+      "scenarios": 38,
+      "regressedExchanges": [
+        {
+          "exchange": "ex-000282",
+          "scenario": "T30A",
+          "request": "GET /orderdetails/2?probe=T30A",
+          "reasons": [
+            "clause-regression: OTHERS-ORDER-NEVER-SHOWN",
+            "clause-regression: OTHERS-ORDER-NEVER-NAMES-ITS-OWNER",
+            "clause-regression: OTHERS-ORDER-SENDS-TO-LOGIN"
+          ],
+          "differences": [
+            "extract.orderNumber",
+            "extract.orderStatus",
+            "extract.orderTotals[0]",
+            "extract.orderTotals[1]",
+            "extract.orderTotals[2]",
+            "extract.orderTotals[3]",
+            "response.headers.location",
+            "response.status"
+          ]
+        },
+        {
+          "exchange": "ex-000290",
+          "scenario": "T30B",
+          "request": "GET /orderdetails/2?probe=T30B",
+          "reasons": [
+            "clause-regression: OTHERS-ORDER-NEVER-SHOWN",
+            "clause-regression: OTHERS-ORDER-NEVER-NAMES-ITS-OWNER",
+            "clause-regression: OTHERS-ORDER-SENDS-TO-LOGIN"
+          ],
+          "differences": [
+            "extract.orderNumber",
+            "extract.orderStatus",
+            "extract.orderTotals[0]",
+            "extract.orderTotals[1]",
+            "extract.orderTotals[2]",
+            "extract.orderTotals[3]",
+            "response.headers.location",
+            "response.status"
+          ]
+        }
+      ],
+      "verdictSha256": "dc74e56b694203e1628574af97c48d60a4c2f365316c2bf44aaba28ea3af2d14",
+      "runUrl": "https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36262958486"
+    },
+    {
+      "id": "M08",
+      "title": "Unpublished product page served",
+      "patch": "M08-unpublished-product-page-served.patch",
+      "intendedClauses": [
+        "UNPUBLISHED-PAGE-NEVER-SERVED",
+        "UNPUBLISHED-PAGE-NOT-FOUND"
+      ],
+      "outcome": "killed",
+      "verdictOutcome": "fail",
+      "regressions": 1,
+      "regressedClauses": [
+        "UNPUBLISHED-PAGE-NEVER-SERVED",
+        "UNPUBLISHED-PAGE-NOT-FOUND"
+      ],
+      "uncoveredDifferences": 0,
+      "intendedClauseStatus": {
+        "UNPUBLISHED-PAGE-NEVER-SERVED": "regressed",
+        "UNPUBLISHED-PAGE-NOT-FOUND": "regressed"
+      },
+      "otherRegressedClauses": [],
+      "regressionsByClause": 1,
+      "missingAnswers": 0,
+      "fixCandidates": 0,
+      "exchanges": 290,
+      "scenarios": 38,
+      "regressedExchanges": [
+        {
+          "exchange": "ex-000010",
+          "scenario": "T05",
+          "request": "GET /hp-envy-6-1180ca-156-inch-sleekbook",
+          "reasons": [
+            "clause-regression: UNPUBLISHED-PAGE-NEVER-SERVED",
+            "clause-regression: UNPUBLISHED-PAGE-NOT-FOUND"
+          ],
+          "differences": [
+            "response.status"
+          ]
+        }
+      ],
+      "verdictSha256": "b9fad2519282bb044b17adacc49344283bc875f19744786b2c18513e6754676c",
+      "runUrl": "https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36262958486"
+    },
+    {
+      "id": "M09",
+      "title": "Stock quantity warning dropped",
+      "patch": "M09-stock-quantity-warning-dropped.patch",
+      "intendedClauses": [
+        "QUANTITY-ABOVE-STOCK-REFUSED",
+        "T07-CART-HOLDS-ONE-LENOVO",
+        "ORDER-LOWERS-STOCK"
+      ],
+      "outcome": "killed",
+      "verdictOutcome": "fail",
+      "regressions": 3,
+      "regressedClauses": [
+        "T07-CART-HOLDS-ONE-LENOVO",
+        "QUANTITY-ABOVE-STOCK-REFUSED",
+        "ORDER-LOWERS-STOCK"
+      ],
+      "uncoveredDifferences": 0,
+      "intendedClauseStatus": {
+        "QUANTITY-ABOVE-STOCK-REFUSED": "regressed",
+        "T07-CART-HOLDS-ONE-LENOVO": "regressed",
+        "ORDER-LOWERS-STOCK": "regressed"
+      },
+      "otherRegressedClauses": [],
+      "regressionsByClause": 3,
+      "missingAnswers": 0,
+      "fixCandidates": 0,
+      "exchanges": 290,
+      "scenarios": 38,
+      "regressedExchanges": [
+        {
+          "exchange": "ex-000019",
+          "scenario": "T07",
+          "request": "POST /addproducttocart/details/3/1?probe=T07",
+          "reasons": [
+            "clause-regression: QUANTITY-ABOVE-STOCK-REFUSED"
+          ],
+          "differences": [
+            "response.body.json.message",
+            "response.body.json.success",
+            "response.body.json.updateflyoutcartsectionhtml",
+            "response.body.json.updatetopcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000020",
+          "scenario": "T07",
+          "request": "GET /cart?probe=T07",
+          "reasons": [
+            "clause-regression: T07-CART-HOLDS-ONE-LENOVO"
+          ],
+          "differences": [
+            "extract.cartLineTotals[0]",
+            "extract.cartQuantities[0]",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTotal"
+          ]
+        },
+        {
+          "exchange": "ex-000275",
+          "scenario": "T28",
+          "request": "POST /addproducttocart/details/3/1?probe=T28",
+          "reasons": [
+            "clause-regression: ORDER-LOWERS-STOCK"
+          ],
+          "differences": [
+            "response.body.json.message",
+            "response.body.json.success",
+            "response.body.json.updateflyoutcartsectionhtml",
+            "response.body.json.updatetopcartsectionhtml"
+          ]
+        }
+      ],
+      "verdictSha256": "5b5f397331a04da4d4882e7e30c0963f15f5d14c414e3d2b3e0906867750966b",
+      "runUrl": "https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36262958486"
+    },
+    {
+      "id": "M10",
+      "title": "Prices formatted in the invariant culture",
+      "patch": "M10-price-in-invariant-culture.patch",
+      "intendedClauses": [
+        "CART-UNIT-PRICES-WRITTEN-IN-USD"
+      ],
+      "outcome": "killed",
+      "verdictOutcome": "fail",
+      "regressions": 133,
+      "regressedClauses": [
+        "COMPUTER-PAGE-ATTRIBUTE-ADJUSTMENTS",
+        "T09-ATTRIBUTES-PRICED-INTO-UNIT-PRICE",
+        "T10-QUANTITY-UPDATE-REPRICES",
+        "CART-UNIT-PRICES-WRITTEN-IN-USD",
+        "SAVE10-TAKES-10-PERCENT-OF-SUBTOTAL",
+        "COUPON-TRIMMED-AND-CASE-INSENSITIVE",
+        "TAKE50-CAPPED-AT-ORDER-TOTAL",
+        "CART-TOTAL-NEVER-NEGATIVE",
+        "PCT20MAX100-STOPS-AT-MAXIMUM",
+        "SHIPFREE-ZEROES-SHIPPING",
+        "MEMBERS15-FOR-A-REGISTERED-CUSTOMER",
+        "COUPON-123-APPLIED-CHANGES-NOTHING",
+        "TAX-US-NY-10001",
+        "TAX-US-NY-ANY-ZIP",
+        "TAX-US-CALIFORNIA",
+        "TAX-US-ANY-STATE",
+        "TAX-NO-RATE-GERMANY",
+        "TAX-ZIP-MATCH-IGNORES-CASE",
+        "TAX-FOLLOWS-BILLING-ADDRESS",
+        "TAX-EXEMPT-NEVER-TAXED",
+        "TAX-EXEMPT-CART-PRICED",
+        "ESTIMATE-OFFERS-FIXED-RATES-AND-PICKUP",
+        "CHECKOUT-OFFERS-THE-SAME-RATES",
+        "FREE-SHIPPING-PRODUCTS-SHIP-FREE",
+        "NO-FREE-SHIPPING-AT-EXACTLY-1000",
+        "FREE-SHIPPING-OVER-1000",
+        "GUEST-ORDER-TOTALS",
+        "REGISTERED-ORDER-TOTALS"
+      ],
+      "uncoveredDifferences": 98,
+      "intendedClauseStatus": {
+        "CART-UNIT-PRICES-WRITTEN-IN-USD": "regressed"
+      },
+      "otherRegressedClauses": [
+        "COMPUTER-PAGE-ATTRIBUTE-ADJUSTMENTS",
+        "T09-ATTRIBUTES-PRICED-INTO-UNIT-PRICE",
+        "T10-QUANTITY-UPDATE-REPRICES",
+        "SAVE10-TAKES-10-PERCENT-OF-SUBTOTAL",
+        "COUPON-TRIMMED-AND-CASE-INSENSITIVE",
+        "TAKE50-CAPPED-AT-ORDER-TOTAL",
+        "CART-TOTAL-NEVER-NEGATIVE",
+        "PCT20MAX100-STOPS-AT-MAXIMUM",
+        "SHIPFREE-ZEROES-SHIPPING",
+        "MEMBERS15-FOR-A-REGISTERED-CUSTOMER",
+        "COUPON-123-APPLIED-CHANGES-NOTHING",
+        "TAX-US-NY-10001",
+        "TAX-US-NY-ANY-ZIP",
+        "TAX-US-CALIFORNIA",
+        "TAX-US-ANY-STATE",
+        "TAX-NO-RATE-GERMANY",
+        "TAX-ZIP-MATCH-IGNORES-CASE",
+        "TAX-FOLLOWS-BILLING-ADDRESS",
+        "TAX-EXEMPT-NEVER-TAXED",
+        "TAX-EXEMPT-CART-PRICED",
+        "ESTIMATE-OFFERS-FIXED-RATES-AND-PICKUP",
+        "CHECKOUT-OFFERS-THE-SAME-RATES",
+        "FREE-SHIPPING-PRODUCTS-SHIP-FREE",
+        "NO-FREE-SHIPPING-AT-EXACTLY-1000",
+        "FREE-SHIPPING-OVER-1000",
+        "GUEST-ORDER-TOTALS",
+        "REGISTERED-ORDER-TOTALS"
+      ],
+      "regressionsByClause": 35,
+      "missingAnswers": 0,
+      "fixCandidates": 0,
+      "exchanges": 290,
+      "scenarios": 38,
+      "regressedExchanges": [
+        {
+          "exchange": "ex-000009",
+          "scenario": "T04",
+          "request": "GET /build-your-own-computer",
+          "reasons": [
+            "clause-regression: COMPUTER-PAGE-ATTRIBUTE-ADJUSTMENTS"
+          ],
+          "differences": [
+            "extract.attributeOptions[1]",
+            "extract.attributeOptions[3]",
+            "extract.attributeOptions[4]",
+            "extract.attributeOptions[6]",
+            "extract.attributeOptions[7]",
+            "extract.attributeOptions[8]",
+            "extract.attributeOptions[9]",
+            "extract.attributeOptions[10]",
+            "extract.attributeOptions[11]"
+          ]
+        },
+        {
+          "exchange": "ex-000017",
+          "scenario": "T07",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000020",
+          "scenario": "T07",
+          "request": "GET /cart?probe=T07",
+          "reasons": [
+            "clause-regression: CART-UNIT-PRICES-WRITTEN-IN-USD"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000023",
+          "scenario": "T08",
+          "request": "POST /addproducttocart/details/4/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000024",
+          "scenario": "T08",
+          "request": "GET /cart?probe=T08",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000025",
+          "scenario": "T09",
+          "request": "GET /build-your-own-computer",
+          "reasons": [
+            "clause-regression: COMPUTER-PAGE-ATTRIBUTE-ADJUSTMENTS"
+          ],
+          "differences": [
+            "extract.attributeOptions[1]",
+            "extract.attributeOptions[3]",
+            "extract.attributeOptions[4]",
+            "extract.attributeOptions[6]",
+            "extract.attributeOptions[7]",
+            "extract.attributeOptions[8]",
+            "extract.attributeOptions[9]",
+            "extract.attributeOptions[10]",
+            "extract.attributeOptions[11]"
+          ]
+        },
+        {
+          "exchange": "ex-000027",
+          "scenario": "T09",
+          "request": "POST /addproducttocart/details/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000028",
+          "scenario": "T09",
+          "request": "GET /cart?probe=T09",
+          "reasons": [
+            "clause-regression: T09-ATTRIBUTES-PRICED-INTO-UNIT-PRICE",
+            "clause-regression: CART-UNIT-PRICES-WRITTEN-IN-USD",
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000029",
+          "scenario": "T10",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000030",
+          "scenario": "T10",
+          "request": "POST /addproducttocart/catalog/39/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000031",
+          "scenario": "T10",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPriceTexts[1]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000032",
+          "scenario": "T10",
+          "request": "POST /cart?probe=T10-quantity",
+          "reasons": [
+            "clause-regression: T10-QUANTITY-UPDATE-REPRICES",
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPriceTexts[1]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000033",
+          "scenario": "T10",
+          "request": "POST /cart?probe=T10-remove",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000035",
+          "scenario": "T11",
+          "request": "POST /addproducttocart/catalog/3/1/2",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000036",
+          "scenario": "T11",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000037",
+          "scenario": "T11",
+          "request": "POST /cart?probe=T11",
+          "reasons": [
+            "clause-regression: SAVE10-TAKES-10-PERCENT-OF-SUBTOTAL"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartSubtotalDiscount",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000038",
+          "scenario": "T12",
+          "request": "POST /addproducttocart/catalog/3/1/2",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000039",
+          "scenario": "T12",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000040",
+          "scenario": "T12",
+          "request": "POST /cart?probe=T12",
+          "reasons": [
+            "clause-regression: COUPON-TRIMMED-AND-CASE-INSENSITIVE"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartSubtotalDiscount",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000041",
+          "scenario": "T12B",
+          "request": "POST /addproducttocart/catalog/3/1/2",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000042",
+          "scenario": "T12B",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000043",
+          "scenario": "T12B",
+          "request": "POST /cart?probe=T12B",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000044",
+          "scenario": "T13",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000045",
+          "scenario": "T13",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000046",
+          "scenario": "T13",
+          "request": "POST /cart?probe=T13-expired",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000047",
+          "scenario": "T13",
+          "request": "POST /cart?probe=T13-future",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000048",
+          "scenario": "T13",
+          "request": "POST /cart?probe=T13-unknown",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000049",
+          "scenario": "T14",
+          "request": "POST /addproducttocart/catalog/39/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000050",
+          "scenario": "T14",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000056",
+          "scenario": "T14",
+          "request": "POST /checkout/OpcSaveBilling/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000059",
+          "scenario": "T14",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000060",
+          "scenario": "T14",
+          "request": "GET /cart",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000061",
+          "scenario": "T14",
+          "request": "POST /cart?probe=T14",
+          "reasons": [
+            "clause-regression: TAKE50-CAPPED-AT-ORDER-TOTAL",
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartTotalDiscount",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000063",
+          "scenario": "T15",
+          "request": "POST /addproducttocart/details/4/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000064",
+          "scenario": "T15",
+          "request": "GET /cart",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000065",
+          "scenario": "T15",
+          "request": "POST /cart?probe=T15",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE",
+            "clause-regression: PCT20MAX100-STOPS-AT-MAXIMUM"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartSubtotalDiscount",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000066",
+          "scenario": "T16",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000067",
+          "scenario": "T16",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000073",
+          "scenario": "T16",
+          "request": "POST /checkout/OpcSaveBilling/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000076",
+          "scenario": "T16",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000077",
+          "scenario": "T16",
+          "request": "GET /cart",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000078",
+          "scenario": "T16",
+          "request": "POST /cart?probe=T16",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE",
+            "clause-regression: SHIPFREE-ZEROES-SHIPPING"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000080",
+          "scenario": "T17",
+          "request": "POST /addproducttocart/details/43/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000081",
+          "scenario": "T17",
+          "request": "POST /addproducttocart/catalog/39/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000082",
+          "scenario": "T17",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPriceTexts[1]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000083",
+          "scenario": "T17",
+          "request": "POST /cart?probe=T17",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPriceTexts[1]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000084",
+          "scenario": "T18A",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000085",
+          "scenario": "T18A",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000086",
+          "scenario": "T18A",
+          "request": "POST /cart?probe=T18A",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000090",
+          "scenario": "T18B",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000091",
+          "scenario": "T18B",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000092",
+          "scenario": "T18B",
+          "request": "POST /cart?probe=T18B",
+          "reasons": [
+            "clause-regression: MEMBERS15-FOR-A-REGISTERED-CUSTOMER"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartSubtotalDiscount",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000096",
+          "scenario": "T19",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000097",
+          "scenario": "T19",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000098",
+          "scenario": "T19",
+          "request": "POST /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotalDiscount",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000099",
+          "scenario": "T19",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotalDiscount",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000103",
+          "scenario": "T19",
+          "request": "POST /checkout/OpcSaveBilling/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000106",
+          "scenario": "T19",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000109",
+          "scenario": "T19",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000110",
+          "scenario": "T19",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000111",
+          "scenario": "T19",
+          "request": "POST /cart?probe=T19",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000112",
+          "scenario": "T20",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000113",
+          "scenario": "T20",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000114",
+          "scenario": "T20",
+          "request": "POST /cart?probe=T20",
+          "reasons": [
+            "clause-regression: COUPON-123-APPLIED-CHANGES-NOTHING"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000115",
+          "scenario": "T21",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000116",
+          "scenario": "T21",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000122",
+          "scenario": "T21",
+          "request": "POST /checkout/OpcSaveBilling/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000125",
+          "scenario": "T21",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000126",
+          "scenario": "T21",
+          "request": "GET /cart?probe=T21",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE",
+            "clause-regression: TAX-US-NY-10001"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000127",
+          "scenario": "T22A",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000128",
+          "scenario": "T22A",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000134",
+          "scenario": "T22A",
+          "request": "POST /checkout/OpcSaveBilling/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000137",
+          "scenario": "T22A",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000138",
+          "scenario": "T22A",
+          "request": "GET /cart?probe=T22A",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE",
+            "clause-regression: TAX-US-NY-ANY-ZIP"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000139",
+          "scenario": "T22B",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000140",
+          "scenario": "T22B",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000146",
+          "scenario": "T22B",
+          "request": "POST /checkout/OpcSaveBilling/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000149",
+          "scenario": "T22B",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000150",
+          "scenario": "T22B",
+          "request": "GET /cart?probe=T22B",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE",
+            "clause-regression: TAX-US-CALIFORNIA"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000151",
+          "scenario": "T22C",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000152",
+          "scenario": "T22C",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000158",
+          "scenario": "T22C",
+          "request": "POST /checkout/OpcSaveBilling/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000161",
+          "scenario": "T22C",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000162",
+          "scenario": "T22C",
+          "request": "GET /cart?probe=T22C",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE",
+            "clause-regression: TAX-US-ANY-STATE"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000163",
+          "scenario": "T22D",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000164",
+          "scenario": "T22D",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000169",
+          "scenario": "T22D",
+          "request": "POST /checkout/OpcSaveBilling/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000172",
+          "scenario": "T22D",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000173",
+          "scenario": "T22D",
+          "request": "GET /cart?probe=T22D",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE",
+            "clause-regression: TAX-NO-RATE-GERMANY"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000174",
+          "scenario": "T23",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000175",
+          "scenario": "T23",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000181",
+          "scenario": "T23",
+          "request": "POST /checkout/OpcSaveBilling/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000184",
+          "scenario": "T23",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000185",
+          "scenario": "T23",
+          "request": "GET /cart?probe=T23",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE",
+            "clause-regression: TAX-ZIP-MATCH-IGNORES-CASE"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000187",
+          "scenario": "T22E",
+          "request": "POST /addproducttocart/details/4/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000188",
+          "scenario": "T22E",
+          "request": "GET /cart",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000194",
+          "scenario": "T22E",
+          "request": "POST /checkout/OpcSaveBilling/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000197",
+          "scenario": "T22E",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000198",
+          "scenario": "T22E",
+          "request": "GET /cart?probe=T22E",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE",
+            "clause-regression: TAX-EXEMPT-NEVER-TAXED",
+            "clause-regression: TAX-EXEMPT-CART-PRICED"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000199",
+          "scenario": "T22F",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000200",
+          "scenario": "T22F",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000206",
+          "scenario": "T22F",
+          "request": "POST /checkout/OpcSaveBilling/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000208",
+          "scenario": "T22F",
+          "request": "POST /checkout/OpcSaveShipping/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000211",
+          "scenario": "T22F",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000212",
+          "scenario": "T22F",
+          "request": "GET /cart?probe=T22F",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE",
+            "clause-regression: TAX-FOLLOWS-BILLING-ADDRESS"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000213",
+          "scenario": "T24",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000214",
+          "scenario": "T24",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000216",
+          "scenario": "T24",
+          "request": "POST /cart/estimateshipping?probe=T24",
+          "reasons": [
+            "clause-regression: ESTIMATE-OFFERS-FIXED-RATES-AND-PICKUP"
+          ],
+          "differences": [
+            "extract.shippingEstimates[0]",
+            "extract.shippingEstimates[1]",
+            "extract.shippingEstimates[2]",
+            "extract.shippingEstimates[3]"
+          ]
+        },
+        {
+          "exchange": "ex-000217",
+          "scenario": "T24",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000223",
+          "scenario": "T24",
+          "request": "POST /checkout/OpcSaveBilling/?probe=T24",
+          "reasons": [
+            "clause-regression: CHECKOUT-OFFERS-THE-SAME-RATES"
+          ],
+          "differences": [
+            "extract.checkoutGround",
+            "extract.checkoutNextDayAir",
+            "extract.checkoutSecondDayAir",
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000226",
+          "scenario": "T24",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000228",
+          "scenario": "T25",
+          "request": "POST /addproducttocart/details/4/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000229",
+          "scenario": "T25",
+          "request": "GET /cart",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000231",
+          "scenario": "T25",
+          "request": "POST /cart/estimateshipping?probe=T25",
+          "reasons": [
+            "clause-regression: FREE-SHIPPING-PRODUCTS-SHIP-FREE"
+          ],
+          "differences": [
+            "extract.shippingEstimates[0]",
+            "extract.shippingEstimates[1]",
+            "extract.shippingEstimates[2]",
+            "extract.shippingEstimates[3]"
+          ]
+        },
+        {
+          "exchange": "ex-000232",
+          "scenario": "T26",
+          "request": "POST /addproducttocart/catalog/3/1/2",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000233",
+          "scenario": "T26",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000235",
+          "scenario": "T26",
+          "request": "POST /cart/estimateshipping?probe=T26-1000",
+          "reasons": [
+            "clause-regression: NO-FREE-SHIPPING-AT-EXACTLY-1000"
+          ],
+          "differences": [
+            "extract.shippingEstimates[0]",
+            "extract.shippingEstimates[1]",
+            "extract.shippingEstimates[2]",
+            "extract.shippingEstimates[3]"
+          ]
+        },
+        {
+          "exchange": "ex-000236",
+          "scenario": "T26",
+          "request": "POST /addproducttocart/catalog/39/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000237",
+          "scenario": "T26",
+          "request": "GET /cart",
+          "reasons": [
+            "clause-regression: CART-TOTAL-NEVER-NEGATIVE"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartShipping",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartTotal",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPriceTexts[1]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000239",
+          "scenario": "T26",
+          "request": "POST /cart/estimateshipping?probe=T26-1024",
+          "reasons": [
+            "clause-regression: FREE-SHIPPING-OVER-1000"
+          ],
+          "differences": [
+            "extract.shippingEstimates[0]",
+            "extract.shippingEstimates[1]",
+            "extract.shippingEstimates[2]",
+            "extract.shippingEstimates[3]"
+          ]
+        },
+        {
+          "exchange": "ex-000240",
+          "scenario": "T27",
+          "request": "POST /addproducttocart/catalog/3/1/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000241",
+          "scenario": "T27",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000247",
+          "scenario": "T27",
+          "request": "POST /checkout/OpcSaveBilling/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000250",
+          "scenario": "T27",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000253",
+          "scenario": "T27",
+          "request": "GET /orderdetails/6?probe=T27",
+          "reasons": [
+            "clause-regression: GUEST-ORDER-TOTALS"
+          ],
+          "differences": [
+            "extract.orderTotals[0]",
+            "extract.orderTotals[1]",
+            "extract.orderTotals[2]",
+            "extract.orderTotals[3]"
+          ]
+        },
+        {
+          "exchange": "ex-000257",
+          "scenario": "T28",
+          "request": "POST /addproducttocart/catalog/3/1/2",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.updateflyoutcartsectionhtml"
+          ]
+        },
+        {
+          "exchange": "ex-000258",
+          "scenario": "T28",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000259",
+          "scenario": "T28",
+          "request": "POST /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartSubtotalDiscount",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000260",
+          "scenario": "T28",
+          "request": "GET /cart",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.cartLineTotals",
+            "extract.cartSubtotal",
+            "extract.cartSubtotalDiscount",
+            "extract.cartTax",
+            "extract.cartUnitPriceTexts[0]",
+            "extract.cartUnitPrices",
+            "extractErrors"
+          ]
+        },
+        {
+          "exchange": "ex-000265",
+          "scenario": "T28",
+          "request": "POST /checkout/OpcSaveBilling/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000269",
+          "scenario": "T28",
+          "request": "POST /checkout/OpcSavePaymentInfo/",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "response.body.json.update_section.html"
+          ]
+        },
+        {
+          "exchange": "ex-000272",
+          "scenario": "T28",
+          "request": "GET /orderdetails/6?probe=T28",
+          "reasons": [
+            "clause-regression: REGISTERED-ORDER-TOTALS"
+          ],
+          "differences": [
+            "extract.orderTotals[0]",
+            "extract.orderTotals[1]",
+            "extract.orderTotals[2]",
+            "extract.orderTotals[3]",
+            "extract.orderTotals[4]"
+          ]
+        },
+        {
+          "exchange": "ex-000280",
+          "scenario": "T29",
+          "request": "GET /orderdetails/1",
+          "reasons": [
+            "uncovered-difference"
+          ],
+          "differences": [
+            "extract.orderTotals[0]",
+            "extract.orderTotals[1]",
+            "extract.orderTotals[2]",
+            "extract.orderTotals[3]"
+          ]
+        }
+      ],
+      "verdictSha256": "e0ef8895230c26212d6bf37264b17d572bd1721948dff3580aa6125c0f320053",
+      "runUrl": "https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36262958486"
+    },
+    {
+      "id": "M11",
+      "title": "Gift-card exclusion dropped from discount validation",
+      "patch": "M11-gift-card-exclusion-dropped.patch",
+      "intendedClauses": [
+        "GIFT-CARD-IN-CART-COUPON-MESSAGE",
+        "GIFT-CARD-CART-NEVER-DISCOUNTED"
+      ],
+      "outcome": "killed",
+      "verdictOutcome": "fail",
+      "regressions": 1,
+      "regressedClauses": [
+        "GIFT-CARD-IN-CART-COUPON-MESSAGE",
+        "GIFT-CARD-CART-NEVER-DISCOUNTED"
+      ],
+      "uncoveredDifferences": 0,
+      "intendedClauseStatus": {
+        "GIFT-CARD-IN-CART-COUPON-MESSAGE": "regressed",
+        "GIFT-CARD-CART-NEVER-DISCOUNTED": "regressed"
+      },
+      "otherRegressedClauses": [],
+      "regressionsByClause": 1,
+      "missingAnswers": 0,
+      "fixCandidates": 0,
+      "exchanges": 290,
+      "scenarios": 38,
+      "regressedExchanges": [
+        {
+          "exchange": "ex-000083",
+          "scenario": "T17",
+          "request": "POST /cart?probe=T17",
+          "reasons": [
+            "clause-regression: GIFT-CARD-IN-CART-COUPON-MESSAGE",
+            "clause-regression: GIFT-CARD-CART-NEVER-DISCOUNTED"
+          ],
+          "differences": [
+            "extract.cartSubtotalDiscount",
+            "extract.couponMessages[0]"
+          ]
+        }
+      ],
+      "verdictSha256": "6a82ff21f3cd17d909839967286e37304421acac8b27a18a5207ef1f1cef3cef",
+      "runUrl": "https://github.com/konradcinkusz/letsgolegacy.secondkey-nopcommerce-bench/actions/runs/36262958486"
+    }
+  ],
+  "collectedAtUtc": "2026-09-26T18:51:50Z"
+}

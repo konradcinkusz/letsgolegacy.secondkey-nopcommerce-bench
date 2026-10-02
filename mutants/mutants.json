@@ -1,0 +1,129 @@
+{
+  "_comment": "P9's mutant set, pre-registered (docs/P9-MUTANTS.md): each mutant is one defect in the pinned nopCommerce source, as a unified diff in this folder, with the contract clauses expected to catch it. Committed with the patches before the first mutant run; intendedClauses is never edited after a result is seen. ASCII only: Windows PowerShell 5.1 reads it.",
+  "nopCommerce": {
+    "tag": "release-3.90",
+    "commit": "12d1f0139149a9d6e84964d325d62bae6ac748f6"
+  },
+  "mutants": [
+    {
+      "id": "M00",
+      "title": "Calibration: no source change",
+      "patch": null,
+      "file": null,
+      "member": null,
+      "change": "None: the pinned source, built a second time and deployed like every mutant.",
+      "intent": "Measures the method, not the contract: two builds of the same code, as two sites on one database, replayed against each other. The verdict must be pass; a run whose M00 is not pass counts no mutant result.",
+      "intendedClauses": []
+    },
+    {
+      "id": "M01",
+      "title": "Free shipping from exactly the threshold",
+      "patch": "M01-free-shipping-at-the-threshold.patch",
+      "file": "src/Libraries/Nop.Services/Orders/OrderTotalCalculationService.cs",
+      "member": "OrderTotalCalculationService.IsFreeShipping",
+      "change": "subTotal.Value > FreeShippingOverXValue becomes >=.",
+      "intent": "A boundary slip: free shipping over $1,000.00 starts to include $1,000.00 itself, so T26's cart of exactly $1,000.00 is estimated Ground ($0.00).",
+      "intendedClauses": ["NO-FREE-SHIPPING-AT-EXACTLY-1000"]
+    },
+    {
+      "id": "M02",
+      "title": "Coupon code matched case-sensitively",
+      "patch": "M02-coupon-code-case-sensitive.patch",
+      "file": "src/Libraries/Nop.Services/Discounts/DiscountService.cs",
+      "member": "DiscountService.ValidateDiscount",
+      "change": "The coupon code comparison, StringComparison.InvariantCultureIgnoreCase, becomes StringComparison.Ordinal.",
+      "intent": "The analyzer-driven 'compare ordinally' fix that drops IgnoreCase: the database still finds SAVE10 for ' save10 ' (its collation ignores case), but validation now refuses it, so T12's lower-case coupon is not applied.",
+      "intendedClauses": ["COUPON-TRIMMED-AND-CASE-INSENSITIVE"]
+    },
+    {
+      "id": "M03",
+      "title": "Maximum discount amount ignored",
+      "patch": "M03-maximum-discount-amount-dropped.patch",
+      "file": "src/Libraries/Nop.Services/Discounts/DiscountExtensions.cs",
+      "member": "DiscountExtensions.MapDiscount",
+      "change": "The line copying MaximumDiscountAmount into the cached discount model (DiscountForCaching) is dropped.",
+      "intent": "A field lost in a port of a mapping: the cap never reaches the discount calculation, so PCT20MAX100 on T15's $3,600.00 cart takes 20% ($720.00) instead of stopping at $100.00.",
+      "intendedClauses": ["PCT20MAX100-STOPS-AT-MAXIMUM"]
+    },
+    {
+      "id": "M04",
+      "title": "Order total no longer bounded by the order",
+      "patch": "M04-order-total-not-bounded.patch",
+      "file": "src/Libraries/Nop.Services/Orders/OrderTotalCalculationService.cs",
+      "member": "OrderTotalCalculationService.GetShoppingCartTotal",
+      "change": "The cap of the order total discount at the order total, and both clamps of the order total at zero, are removed.",
+      "intent": "Guard clauses lost in a rewrite: TAKE50 on T14's $34.00 order is taken in full ($50.00) and the total goes below zero (-16.00). 3.90 guards the total twice - the discount is capped at the total, then the total is clamped at zero - so removing the clamps alone would change nothing on this traffic; the mutant removes both guards.",
+      "intendedClauses": ["TAKE50-CAPPED-AT-ORDER-TOTAL", "CART-TOTAL-NEVER-NEGATIVE"]
+    },
+    {
+      "id": "M05",
+      "title": "Tax from the shipping address instead of the billing address",
+      "patch": "M05-tax-from-the-shipping-address.patch",
+      "file": "src/Libraries/Nop.Services/Tax/TaxService.cs",
+      "member": "TaxService.CreateCalculateTaxRequest",
+      "change": "For TaxBasedOn.BillingAddress the tax request takes customer.ShippingAddress.",
+      "intent": "A copy-paste slip in a switch: the store taxes by billing address, and T22F - billed to New York 10001, shipped to Texas - is taxed at Texas's 5% ($25.00) instead of New York's 9% ($45.00).",
+      "intendedClauses": ["TAX-FOLLOWS-BILLING-ADDRESS"]
+    },
+    {
+      "id": "M06",
+      "title": "Tax zip match made case-sensitive",
+      "patch": "M06-tax-zip-match-case-sensitive.patch",
+      "file": "src/Plugins/Nop.Plugin.Tax.FixedOrByCountryStateZip/FixedOrByCountryStateZipTaxProvider.cs",
+      "member": "FixedOrByCountryStateZipTaxProvider.GetTaxRate",
+      "change": "The zip comparison, StringComparison.InvariantCultureIgnoreCase, becomes StringComparison.Ordinal.",
+      "intent": "The same ordinal slip in the tax provider plugin: 'k1a 0b1' no longer matches the rate stored for K1A 0B1, and Ontario has no rate for any zip, so T23 is taxed 0.00 instead of 13% ($65.00).",
+      "intendedClauses": ["TAX-ZIP-MATCH-IGNORES-CASE"]
+    },
+    {
+      "id": "M07",
+      "title": "Order details served without the owner check",
+      "patch": "M07-order-details-without-owner-check.patch",
+      "file": "src/Presentation/Nop.Web/Controllers/OrderController.cs",
+      "member": "OrderController.Details",
+      "change": "_workContext.CurrentCustomer.Id != order.CustomerId is dropped from the condition that refuses the page.",
+      "intent": "An authorization check lost in a port of the action: anyone - the guest of T30A, another customer in T30B - gets order 2's details page, owner's name included, instead of the redirect to sign in. The print view, the PDF and the reorder keep their checks.",
+      "intendedClauses": ["OTHERS-ORDER-NEVER-SHOWN", "OTHERS-ORDER-NEVER-NAMES-ITS-OWNER", "OTHERS-ORDER-SENDS-TO-LOGIN"]
+    },
+    {
+      "id": "M08",
+      "title": "Unpublished product page served",
+      "patch": "M08-unpublished-product-page-served.patch",
+      "file": "src/Presentation/Nop.Web/Controllers/ProductController.cs",
+      "member": "ProductController.ProductDetails",
+      "change": "The 'published?' condition, !product.Published && !AllowViewUnpublishedProductPage, is dropped from the availability check.",
+      "intent": "A dropped condition: the unpublished HP Envy's page (T05) answers 200, the product for sale again from an old link, instead of 404.",
+      "intendedClauses": ["UNPUBLISHED-PAGE-NEVER-SERVED", "UNPUBLISHED-PAGE-NOT-FOUND"]
+    },
+    {
+      "id": "M09",
+      "title": "Stock quantity warning dropped",
+      "patch": "M09-stock-quantity-warning-dropped.patch",
+      "file": "src/Libraries/Nop.Services/Orders/ShoppingCartService.cs",
+      "member": "ShoppingCartService.GetStandardWarnings",
+      "change": "The 'quantity exceeds stock on hand' warning - some stock left, less than asked for - is removed; the out-of-stock warning stays.",
+      "intent": "A lost else branch: T07's add of 5 Lenovos to a cart of 1, with 3 in stock, is accepted, and so is T28's add of 2 with 1 left after the order.",
+      "intendedClauses": ["QUANTITY-ABOVE-STOCK-REFUSED", "T07-CART-HOLDS-ONE-LENOVO", "ORDER-LOWERS-STOCK"]
+    },
+    {
+      "id": "M10",
+      "title": "Prices formatted in the invariant culture",
+      "patch": "M10-price-in-invariant-culture.patch",
+      "file": "src/Libraries/Nop.Services/Catalog/PriceFormatter.cs",
+      "member": "PriceFormatter.GetCurrencyString",
+      "change": "amount.ToString(\"C\", new CultureInfo(targetCurrency.DisplayLocale)) becomes amount.ToString(\"C\", CultureInfo.InvariantCulture).",
+      "intent": "The analyzer-driven 'pass a culture' fix that passes the invariant one: every price loses the currency's own format and is written with the generic currency sign instead of $. Aimed at the cart's unit prices; every clause that reads a formatted amount is expected to fail with them.",
+      "intendedClauses": ["CART-UNIT-PRICES-WRITTEN-IN-USD"]
+    },
+    {
+      "id": "M11",
+      "title": "Gift-card exclusion dropped from discount validation",
+      "patch": "M11-gift-card-exclusion-dropped.patch",
+      "file": "src/Libraries/Nop.Services/Discounts/DiscountService.cs",
+      "member": "DiscountService.ValidateDiscount",
+      "change": "The block that refuses order subtotal and order total discounts while the cart holds a gift card is removed.",
+      "intent": "A dropped business rule: SAVE10 on T17's cart with a $25 gift card is applied - a subtotal discount of ($4.90) - instead of refused with 'Sorry, this discount cannot be used with gift cards in the cart'.",
+      "intendedClauses": ["GIFT-CARD-IN-CART-COUPON-MESSAGE", "GIFT-CARD-CART-NEVER-DISCOUNTED"]
+    }
+  ]
+}

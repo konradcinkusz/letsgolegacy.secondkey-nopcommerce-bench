@@ -69,6 +69,18 @@ pwsh scripts/9-verdict.ps1              # anywhere: sk compare and the evidence 
 How the contract is written and what it covers: [`contract/`](contract/README.md); what
 a run showed: [`results/p5`](results/p5/README.md).
 
+## Killed mutants (P9)
+
+Does the contract notice when behaviour changes? Eleven hand-written defects in the 3.90
+source — a boundary, a dropped check, a comparison that loses its case rule, a lost cap —
+each aimed at named clauses and pre-registered before any of them ran
+([`docs/P9-MUTANTS.md`](docs/P9-MUTANTS.md), [`mutants/`](mutants/mutants.json)). Each one
+is built, run as a second IIS site on the legacy shop's database and replayed against the
+legacy shop exactly as the migrated candidate will be; it is killed when `sk compare`
+answers `fail`. M00, the same code built twice, must pass, or the run does not count. CI:
+[`mutants.yml`](.github/workflows/mutants.yml); what a run showed — **11 of 11 killed**,
+M00 passing: [`results/p9`](results/p9/README.md).
+
 ## Warm-up: the chain on eShopLegacyMVC (P3)
 
 Before the chain meets nopCommerce it runs once, end to end, on Microsoft's sample legacy

@@ -58,6 +58,7 @@ flowchart LR
 | Recording proxy (P4) | `http://127.0.0.1:8000/` → `http://localhost:8080/` | [`scripts/7-record-traffic.ps1`](../scripts/7-record-traffic.ps1) `-ProxyUrl` |
 | Database snapshot (P4) | `nopcommerce_legacy_snapshot`, taken after the store configuration; restored before every scenario | step 7 |
 | Candidate (planned, P7) | `http://localhost:8090/`, its own database copy | P7 |
+| P9 mutant | `http://localhost:8091/`, IIS site and pool `nopcommerce-mutant`, folder `C:\inetpub\nopcommerce-mutant`; on the legacy database (`db_owner`), reset from the same snapshot | [`scripts/mutants/2-deploy-mutant.ps1`](../scripts/mutants/2-deploy-mutant.ps1) `-Port` |
 | P3 warm-up: eShopLegacyMVC | `http://localhost:8081/`, IIS site `eshop-legacy`, mock data (no database) | [`scripts/eshop/2-deploy-eshop.ps1`](../scripts/eshop/2-deploy-eshop.ps1) |
 | P3 warm-up: recording proxy | `http://127.0.0.1:8001/` → `http://localhost:8081/` | [`scripts/eshop/3-record-eshop.ps1`](../scripts/eshop/3-record-eshop.ps1) |
 
@@ -81,6 +82,17 @@ warmup-eshop.yml (P3)
   legacy  (windows-2022)  eshop 1-build -> IIS -> 2-deploy -> 3-record (sk capture)
                           -> 4-replay (sk replay, A/A) -> 5-scan (Portcullis) -> eshop-recordings
   verdict (ubuntu-24.04)  6-verdict: sk compare, sk gate, sk evidence       -> eshop-evidence-pack
+
+mutants.yml (P9)
+  plan    (ubuntu-24.04)  1-fetch -> mutants/1-check: catalog, every patch against the tree -> matrix
+  build   (windows-2022)  1-fetch -> 2-build                               -> legacy-site
+  tools   (ubuntu-24.04)  chain-tools.yml                                  -> chain-tools
+  mutant  (windows-2022, one per mutant) 1-fetch -> 2-build -Patch (the mutant, own work root)
+                          -> 3 -> 4 -> 5 -> 6 (legacy) -> mutants/2-deploy (the mutant, :8091)
+                          -> 7-record (legacy) -> 8-replay -Candidate :8091 -> mutant-<id>-replay
+  verdict (ubuntu-24.04, one per mutant) 9-verdict -> mutants/3-outcome
+                                          -> mutant-<id>-evidence-pack, mutant-<id>-outcome
+  summary (ubuntu-24.04)  mutants/4-collect: N of 11 killed, M00 must pass -> mutants
 ```
 
 The warm-up is the first run of the split described below: everything that needs the

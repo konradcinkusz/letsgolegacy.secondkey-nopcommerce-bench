@@ -1,0 +1,29 @@
+diff --git a/src/Libraries/Nop.Services/Discounts/DiscountService.cs b/src/Libraries/Nop.Services/Discounts/DiscountService.cs
+index 5b6bb0f..5681281 100644
+--- a/src/Libraries/Nop.Services/Discounts/DiscountService.cs
++++ b/src/Libraries/Nop.Services/Discounts/DiscountService.cs
+@@ -538,24 +538,6 @@ namespace Nop.Services.Discounts
+                     return result;
+             }
+ 
+-            //Do not allow discounts applied to order subtotal or total when a customer has gift cards in the cart.
+-            //Otherwise, this customer can purchase gift cards with discount and get more than paid ("free money").
+-            if (discount.DiscountType == DiscountType.AssignedToOrderSubTotal ||
+-                discount.DiscountType == DiscountType.AssignedToOrderTotal)
+-            {
+-                var cart = customer.ShoppingCartItems
+-                    .Where(sci => sci.ShoppingCartType == ShoppingCartType.ShoppingCart)
+-                    .LimitPerStore(_storeContext.CurrentStore.Id)
+-                    .ToList();
+-
+-                var hasGiftCards = cart.Any(x => x.Product.IsGiftCard);
+-                if (hasGiftCards)
+-                {
+-                    result.Errors = new List<string> { _localizationService.GetResource("ShoppingCart.Discount.CannotBeUsedWithGiftCards") };
+-                    return result;
+-                }
+-            }
+-
+             //check date range
+             DateTime now = DateTime.UtcNow;
+             if (discount.StartDateUtc.HasValue)

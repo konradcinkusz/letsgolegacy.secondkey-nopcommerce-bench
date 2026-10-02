@@ -1,0 +1,13 @@
+diff --git a/src/Libraries/Nop.Services/Tax/TaxService.cs b/src/Libraries/Nop.Services/Tax/TaxService.cs
+index 6568591..781b5e5 100644
+--- a/src/Libraries/Nop.Services/Tax/TaxService.cs
++++ b/src/Libraries/Nop.Services/Tax/TaxService.cs
+@@ -208,7 +208,7 @@ namespace Nop.Services.Tax
+             switch (basedOn)
+             {
+                 case TaxBasedOn.BillingAddress:
+-                    calculateTaxRequest.Address = customer.BillingAddress;
++                    calculateTaxRequest.Address = customer.ShippingAddress;
+                     break;
+                 case TaxBasedOn.ShippingAddress:
+                     calculateTaxRequest.Address = customer.ShippingAddress;

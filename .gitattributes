@@ -1,0 +1,5 @@
+# Mutant patches (P9, docs/P9-MUTANTS.md) are unified diffs against nopCommerce's own files,
+# most of which end their lines with CRLF, and so do the patch lines that quote them. Keep
+# them byte for byte on every platform and git setting - no end-of-line conversion - so each
+# applies to the checkout exactly as step 1 fetches it.
+/mutants/*.patch -text whitespace=cr-at-eol

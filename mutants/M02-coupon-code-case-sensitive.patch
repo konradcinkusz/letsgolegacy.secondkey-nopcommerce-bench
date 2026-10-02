@@ -1,0 +1,13 @@
+diff --git a/src/Libraries/Nop.Services/Discounts/DiscountService.cs b/src/Libraries/Nop.Services/Discounts/DiscountService.cs
+index 5b6bb0f..b40e786 100644
+--- a/src/Libraries/Nop.Services/Discounts/DiscountService.cs
++++ b/src/Libraries/Nop.Services/Discounts/DiscountService.cs
+@@ -534,7 +534,7 @@ namespace Nop.Services.Discounts
+                 if (couponCodesToValidate == null)
+                     return result;
+ 
+-                if (!couponCodesToValidate.Any(x => x.Equals(discount.CouponCode, StringComparison.InvariantCultureIgnoreCase)))
++                if (!couponCodesToValidate.Any(x => x.Equals(discount.CouponCode, StringComparison.Ordinal)))
+                     return result;
+             }
+ 

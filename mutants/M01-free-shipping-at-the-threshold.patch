@@ -1,0 +1,13 @@
+diff --git a/src/Libraries/Nop.Services/Orders/OrderTotalCalculationService.cs b/src/Libraries/Nop.Services/Orders/OrderTotalCalculationService.cs
+index 5af55fd..76f7531 100644
+--- a/src/Libraries/Nop.Services/Orders/OrderTotalCalculationService.cs
++++ b/src/Libraries/Nop.Services/Orders/OrderTotalCalculationService.cs
+@@ -824,7 +824,7 @@ namespace Nop.Services.Orders
+                 }
+ 
+                 //check whether we have subtotal enough to have free shipping
+-                if (subTotal.Value > _shippingSettings.FreeShippingOverXValue)
++                if (subTotal.Value >= _shippingSettings.FreeShippingOverXValue)
+                     return true;
+             }
+ 

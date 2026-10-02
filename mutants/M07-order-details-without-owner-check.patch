@@ -1,0 +1,13 @@
+diff --git a/src/Presentation/Nop.Web/Controllers/OrderController.cs b/src/Presentation/Nop.Web/Controllers/OrderController.cs
+index 168e51d..6fdb99c 100644
+--- a/src/Presentation/Nop.Web/Controllers/OrderController.cs
++++ b/src/Presentation/Nop.Web/Controllers/OrderController.cs
+@@ -156,7 +156,7 @@ namespace Nop.Web.Controllers
+         public virtual ActionResult Details(int orderId)
+         {
+             var order = _orderService.GetOrderById(orderId);
+-            if (order == null || order.Deleted || _workContext.CurrentCustomer.Id != order.CustomerId)
++            if (order == null || order.Deleted)
+                 return new HttpUnauthorizedResult();
+ 
+             var model = _orderModelFactory.PrepareOrderDetailsModel(order);
