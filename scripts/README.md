@@ -51,8 +51,8 @@ with an explicit `exit 0`; a failure throws).
 
 **The one secret.** Step 4 creates the store administrator with a password generated for
 the run (or taken from `NOPBENCH_ADMIN_PASSWORD`). It is masked in CI logs, never printed,
-and written only to `<work>\secrets\legacy-admin.json`, readable by the current user and
-Administrators. Diagnostics never collect it. The database itself has no password: the
+and written only to `<work>\secrets\legacy-admin.json`, readable by the current user,
+Administrators and SYSTEM. Diagnostics never collect it. The database itself has no password: the
 site connects with its application pool identity (Windows authentication).
 
 ## Parameters and environment variables
@@ -78,16 +78,20 @@ Every value has a default; nothing is required.
 | `-DatabaseName` | 4 | `nopcommerce_legacy` | Dropped and recreated on every run. |
 | `-AdminEmail` | 4 | `admin@nopbench.invalid` | Store administrator e-mail (reserved domain). |
 | `NOPBENCH_ADMIN_PASSWORD` | 4 | generated per run | Use a known administrator password instead of a generated one. Keep it out of files in the repository. |
+| `-InstallTimeoutSeconds` | 4 | `1200` | How long the installer's request may take: it creates the database and the sample data within that one request. |
+| `-WarmupTimeoutSeconds` | 4, 5 | `900` (4), `600` (5) | How long the site may take to answer the first time: the install form (4), the home page (4 after the install, and 5). |
 | `-BaseUrl` | 5, 6 | from `state\deploy.json`, else `http://localhost:8080/` | Shop to test or configure. |
 | `-Out` | 7 | `<work>\traffic\nopcommerce.skcap` | The recording. |
 | `-ProxyUrl` | 7 | `http://127.0.0.1:8000/` | Where the recording proxy listens. |
 | `-Only` | 7 | all | Scenario ids to record, for working on one scenario; such a recording is marked partial and is not the traffic set. |
 | `-Capture` | 8 | the recording in `state\traffic.json` | The `*.skcap` to replay. |
 | `-Candidate` | 8 | the legacy shop (A/A) | The other side's base URL (P7). |
+| `-Out` | 8 | `<work>\replay\run.skrun` | The run. |
 | `-Run`, `-OutDir` | 9 | `<work>\replay\run.skrun`, `<work>\replay` | The run to judge; where the verdict and the pack go. |
 | `-Pdf` | 9 | `auto` | `sk evidence --pdf`: `required` fails without a Chromium-based browser. |
 | `NOPBENCH_SK_SQL` | set by 8 for `sk` | built from `state\deploy.json` | The connection string of the snapshot reset ([`../contract/secondkey.yaml`](../contract/secondkey.yaml)); Windows authentication, no secret. |
 | `NOPBENCH_SK`, `NOPBENCH_PORTCULLIS` | steps that drive the chain | `<work>\tools\chain\secondkey\SecondKey.Cli.dll`, `<work>\tools\chain\portcullis\Portcullis.Cli.dll` | The chain's tools (below). |
+| `-OutputDir` | diagnostics | `<work>\diagnostics` | Where `collect-diagnostics.ps1` writes; replaced on every run. |
 | `-MutantWorkRoot` / `NOPBENCH_MUTANT_WORK` | mutants 2 | a folder `nopmut` beside the work root | Where the mutant was built (steps 1 and 2 with `-WorkRoot`). |
 
 ## Hand-off files

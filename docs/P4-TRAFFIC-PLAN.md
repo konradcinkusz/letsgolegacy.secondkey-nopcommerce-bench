@@ -6,7 +6,7 @@ cites it: this is how *this* shop behaves, not how a shop should behave in gener
 
 - **Source read:** `release-3.90`, commit `12d1f01` (pinned in [`pins.json`](../pins.json)).
   Paths are relative to `src/` in that tree; line numbers refer to that commit.
-- **Counts:** 30 scenarios, 46 rules, 9 of them absence ("never") rules — 20% (§8).
+- **Counts:** 30 scenarios, 46 rules, 9 of them absence ("never") rules — 19.6% (§8).
   Recorded as 38 scenario sessions (§4a).
 - **Status:** §1–§4 are recorded (P4): [`scripts/6-configure-store.ps1`](../scripts/6-configure-store.ps1)
   applies §2, [`scripts/traffic/NopCommerce.Scenarios.ps1`](../scripts/traffic/NopCommerce.Scenarios.ps1)
@@ -288,6 +288,13 @@ Values that differ between two runs of the same system (core S12):
 Order numbers are **not** normalised: from the same snapshot and the same requests, the
 ids must match on both sides (`CustomOrderNumberMask = "{ID}"` in the sample settings).
 
+**As built (P5, [`contract/contract.yaml`](../contract/contract.yaml)).** The contract
+compares the status, two headers (`content-type`, `location`) and each page through what its
+extractors read (`html: extracts`), so cookies, the `Date` header, `Content-Length` and the
+other values above never reach the comparison. Three masks cover what still differs where
+JSON or a whole body is compared: `anti-forgery-token`, `pdf-bytes` and
+`cart-line-picture`.
+
 ## 8. Counts
 
 | | Count |
@@ -304,7 +311,7 @@ ids must match on both sides (`CustomOrderNumberMask = "{ID}"` in the sample set
 | Every tax and shipping amount in the recording is $0.00 | §2 was skipped: the sample data ships without rates |
 | A coupon passes on legacy and is "not found" on the candidate | The candidate's discount lookup moved from SQL (collation, case-insensitive) into memory (ordinal) |
 | Replays diverge from the first scenario on | A replay did not start from the S11 snapshot, or the recording bypassed the proxy |
-| A `never` rule passes without checking anything | The scenario never reached what the rule guards (for example T30 without a real order id): each `never` rule needs its positive twin in the same scenario — R44 with R43, R24 with the registered half of T18, R39 with the valid card in T28 |
+| A `never` rule passes without checking anything | The scenario never reached what the rule guards (for example T30 without a real order id): each `never` rule needs its positive twin in the same scenario — R44 with T30's own redirect to `/login` (the contract's `OTHERS-ORDER-SENDS-TO-LOGIN`; R43 is T29, another scenario), R24 with the registered half of T18, R39 with the valid card in T28 |
 | Order ids drift between legacy and candidate | Scenarios ran from different snapshots, or an extra request created an order |
 
 ## 10. Checklist
@@ -313,7 +320,7 @@ ids must match on both sides (`CustomOrderNumberMask = "{ID}"` in the sample set
 - [ ] Every request of every scenario went through the recording proxy
 - [ ] Each persona used its own cookie jar; anti-forgery tokens read from the page where validated
 - [ ] Every rule in §5 is exercised by a recorded scenario, and every `never` rule has its positive twin
-- [ ] The scenario count and the legacy site manifest digest (`state\build.json`) are recorded with the `*.skcap`
+- [ ] The scenario count and the legacy site manifest digest (step 2 records it in `state\build.json`; step 4 takes the same digest of `state\legacy-site.sha256` into `state\deploy.json`, where step 7 reads it) are recorded with the `*.skcap`
 - [ ] The NLS → ICU probes of §6 are in the recording
 
 Worked examples: nopCommerce 3.90 at `12d1f01` — `Libraries/Nop.Services/Discounts/`,

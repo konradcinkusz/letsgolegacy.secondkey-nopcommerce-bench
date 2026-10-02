@@ -35,7 +35,7 @@ On the same Windows host, from an elevated PowerShell:
 The shop then answers at `http://localhost:8080/`. Where everything runs, and how the
 rest of the chain will reach it: [`docs/TOPOLOGY.md`](docs/TOPOLOGY.md).
 
-CI runs all five scripts on `windows-2022` runners
+CI runs these five scripts on `windows-2022` runners
 ([`legacy-build.yml`](.github/workflows/legacy-build.yml)): the build job publishes the
 site as the `legacy-site` artifact, and the next job deploys that artifact and runs the
 smoke test. Parameters, hand-off files and recipes: [`scripts/README.md`](scripts/README.md).

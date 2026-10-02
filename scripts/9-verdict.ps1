@@ -199,7 +199,7 @@ $summary = @(
     '| | |',
     '|---|---|',
     ('| Behaviour | **{0}**: {1} exchanges in {2} scenarios - {3} equal, {4} equal under contract, {5} regressions, {6} fix candidates |' -f $verdict.outcome, $s.exchanges, $s.scenarios, $s.equal, $s.equalUnderContract, $s.regression, $s.fixCandidate),
-    ('| Contract | {0} clauses, {1} accepted ({2} `never`): **{3} held**, {4} not held, {5} unexercised; absence share {6:P0} |' -f $s.clauses.total, $s.clauses.accepted, $never.Count, ($accepted.Count - $notHeld.Count), $notHeld.Count, $s.clauses.unexercised, [double] $s.clauses.absenceShare),
+    ('| Contract | {0} clauses, {1} accepted ({2} `never`): **{3} held**, {4} not held, {5} unexercised; absence share {6:P1} |' -f $s.clauses.total, $s.clauses.accepted, $never.Count, ($accepted.Count - $notHeld.Count), $notHeld.Count, $s.clauses.unexercised, [double] $s.clauses.absenceShare),
     ('| Normalization | equal under contract, by rule (exchanges): {0} |' -f $explainedText),
     ('| Evidence pack | {0} files + manifest.json, digests verified (artifact `nopcommerce-evidence-pack`) |' -f $packFiles.Count),
     ''

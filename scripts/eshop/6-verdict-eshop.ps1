@@ -7,7 +7,7 @@
     files go in - the run from step 4, the SARIF from step 5 and the contract in
     warmup/eshop/ - and only files come out.
 
-      1. sk validate    the contract, the run and the SARIF's companions;
+      1. sk validate    the contract and the run (and, after step 2, the verdict);
       2. sk compare     the run against the contract into verdict.json. The warm-up is an
                         A/A run, so the outcome must be pass, with every accepted clause held
                         and none unexercised; anything else fails this step - after the pack

@@ -281,6 +281,7 @@ $tables = Invoke-BenchSqlScalar -Server $SqlServer -Database $DatabaseName -Quer
 $products = Invoke-BenchSqlScalar -Server $SqlServer -Database $DatabaseName -Query 'SELECT COUNT(*) FROM dbo.Product WHERE Deleted = 0'
 $dbCollation = Invoke-BenchSqlScalar -Server $SqlServer -Query ("SELECT CAST(DATABASEPROPERTYEX(N'{0}', 'Collation') AS nvarchar(128))" -f $DatabaseName)
 Write-BenchLog ('Shop is up at {0}: {1} tables, {2} products, database collation {3}' -f $baseUrl, $tables, $products, $dbCollation)
+if ([int] $products -lt 1) { throw ('The database {0} holds no products: the installer did not create the sample data (ADR 0003, section 4).' -f $DatabaseName) }
 Exit-BenchGroup
 Complete-Phase 'warmup'
 

@@ -17,5 +17,5 @@ secretGroup = 1
 tags = ["database", "connection-string"]
 
   [[rules.allowlists]]
-  description = "A placeholder in angle brackets names where the password comes from, e.g. <from NOPBENCH_SQL_PASSWORD>"
+  description = "A placeholder in angle brackets, e.g. Password=<from the environment>, names where a password would come from"
   regexes = ['''^<''']

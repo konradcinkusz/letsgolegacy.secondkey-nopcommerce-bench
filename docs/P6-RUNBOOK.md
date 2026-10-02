@@ -123,12 +123,15 @@ on the candidate is.
 ### 5.1 Open the candidate branch
 
 Open `nop-p6` on branch `secondkey/p6-candidate` in the client you chose, signed in to
-GitHub Copilot. Confirm the agent sees the standards: ask it, before anything else,
+GitHub Copilot. Confirm the agent sees the standards the way the standards' own guide does
+([`USING-WITH-MODERNIZE-DOTNET.md`](https://github.com/konradcinkusz/letsgolegacy.secondkey-standards/blob/main/docs/USING-WITH-MODERNIZE-DOTNET.md)
+§6): ask it, before anything else,
 
-> List the skills you have loaded from this repository.
+> Which custom skills from .github/skills are you applying?
 
-and paste its answer into the record. If the Second Key skills are missing, stop and fix
-§3 (R4's acceptance is exactly this: the agent picks the skill up).
+(Copilot CLI: `/skills list`, then `/skills info applying-dotnet-migration-standards`) and
+paste its answer into the record. If `applying-dotnet-migration-standards` is missing, stop
+and fix §3 (R4's acceptance is exactly this: the agent picks the skill up).
 
 ### 5.2 Start the modernization
 
@@ -139,14 +142,27 @@ and paste its answer into the record. If the Second Key skills are missing, stop
 | Copilot CLI | `copilot` in the repository root, with the app modernization agent enabled |
 
 Menu names move between releases; use the tool's current documentation for *where* to
-click, and this runbook for *what* to give it. Then send, verbatim:
+click, and this runbook for *what* to give it. The first two prompts are the standards
+guide's (§5, steps 3 and 4), which is their one source: send them verbatim, in this order,
+as the guide states them at the standards version you installed in §3. At standards 0.1.0
+they read:
 
-> Modernize the solution in src/NopCommerce.sln from .NET Framework 4.5.1 to .NET 10.
-> Migrate the ASP.NET MVC 5 web application (Nop.Web, the Administration area and the
-> plugins) to ASP.NET Core on .NET 10. Keep the SQL Server database schema, the public
-> URLs and the observable behaviour of the storefront unchanged. Keep the existing unit
-> test projects and make them build and run on .NET 10. Follow the standards in
-> .github/skills. Commit your work on the current branch in logical steps.
+> Upgrade this solution to .NET 10. Apply the applying-dotnet-migration-standards skill from
+> .github/skills to every task: preserve behaviour, and record every behaviour flag in
+> docs/migration/behaviour-flags.md instead of fixing it.
+
+> From now on, for all tasks in this upgrade, follow the applying-dotnet-migration-standards skill.
+
+Then give it the bench's scope, verbatim:
+
+> The solution is src/NopCommerce.sln, on .NET Framework 4.5.1. Migrate the ASP.NET MVC 5
+> web application (Nop.Web, the Administration area and the plugins) to ASP.NET Core on
+> .NET 10. Keep the SQL Server database schema, the public URLs and the observable
+> behaviour of the storefront unchanged. Keep the existing unit test projects and make them
+> build and run on .NET 10. Commit your work on the current branch in logical steps.
+
+Work through the agent's stages as the guide's §5 step 5 describes, including its check
+that the legacy baseline is in the assessment.
 
 Every follow-up prompt, every answer that asked you to choose, and every choice you made
 goes into the record verbatim, in order. Let the agent commit its own work; do not
@@ -247,7 +263,7 @@ P8 run again on the new head commit, and the record says so.
 - [ ] Fork created; `secondkey/p6-base` is the pinned commit plus the skills commit, nothing else
 - [ ] Skills copied from a tagged standards release; the tag and commit are in the record
 - [ ] Legacy test baseline taken (counts per assembly)
-- [ ] The agent listed the Second Key skills before changing anything
+- [ ] The agent named `applying-dotnet-migration-standards` before changing anything (standards guide §6)
 - [ ] Every prompt, question and choice recorded verbatim; human edits are separate `human:` commits
 - [ ] `dotnet build` succeeds; every test that passed on legacy passes on the candidate
 - [ ] Pull request opened into `secondkey/p6-base`, not merged; its head commit recorded
