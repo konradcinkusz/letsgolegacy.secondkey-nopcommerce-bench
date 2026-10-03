@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/konradcinkusz/letsgolegacy.secondkey/967c49c0005c4412180914f43437d75b43f148dc/schemas/contract.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/konradcinkusz/letsgolegacy.secondkey/c3ae5c28efece2a665a693dbcfa15767197d4ab3/schemas/contract.schema.json
 #
 # The P3 warm-up contract: a small contract for eShopLegacyMVC's catalog manager, run on
 # its mock catalog (docs/adr/0004-chain-tools-and-eshop-warmup.md). Its job is to exercise

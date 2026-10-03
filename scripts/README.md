@@ -149,10 +149,10 @@ The steps that drive Second Key run `sk` (and the P3 gate scan runs Portcullis) 
 
 ```sh
 git clone https://github.com/konradcinkusz/letsgolegacy.secondkey.git secondkey
-git -C secondkey checkout 967c49c0005c4412180914f43437d75b43f148dc   # chain.secondKey.commit
+git -C secondkey checkout c3ae5c28efece2a665a693dbcfa15767197d4ab3   # chain.secondKey.commit
 dotnet build secondkey/src/SecondKey.Cli/SecondKey.Cli.csproj -c Release -o <work>/tools/chain/secondkey
 git clone https://github.com/konradcinkusz/letsgolegacy.portcullis.git portcullis
-git -C portcullis checkout 84e1925fe0d85cf23415f0d33c98590f86128722  # chain.portcullis.commit
+git -C portcullis checkout d045f07daf948ac07c3ac62481cc2a97c5d10846  # chain.portcullis.commit
 dotnet build portcullis/src/Portcullis.Cli/Portcullis.Cli.csproj -c Release -o <work>/tools/chain/portcullis
 ```
 
