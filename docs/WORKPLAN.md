@@ -40,7 +40,8 @@ Prepared ahead of the tickets that use them (#3):
 P5 will assert; [`P6-RUNBOOK.md`](P6-RUNBOOK.md) — the human steps of P6;
 [`P10-ONBOARDING-HOURS.md`](P10-ONBOARDING-HOURS.md) — the hours log.
 [`TOPOLOGY.md`](TOPOLOGY.md) records the demo topology (proposed decision D7), and
-[`adr/`](adr/) the decisions taken in P1–P5 and in P9's mutant part.
+[`adr/`](adr/) the decisions taken in P1–P5 and in P9's mutant part, and the move of the
+chain's pins.
 
 ## The "aha" moment the demo is built around
 

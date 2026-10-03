@@ -58,13 +58,13 @@
     "_comment": "The Second Key tools the bench drives, built from these commits (docs/adr/0004). CI checks each one out with actions/checkout at the commit and builds the project with the .NET 10 SDK.",
     "secondKey": {
       "repository": "konradcinkusz/letsgolegacy.secondkey",
-      "commit": "967c49c0005c4412180914f43437d75b43f148dc",
+      "commit": "c3ae5c28efece2a665a693dbcfa15767197d4ab3",
       "project": "src/SecondKey.Cli/SecondKey.Cli.csproj",
       "assembly": "SecondKey.Cli.dll"
     },
     "portcullis": {
       "repository": "konradcinkusz/letsgolegacy.portcullis",
-      "commit": "84e1925fe0d85cf23415f0d33c98590f86128722",
+      "commit": "d045f07daf948ac07c3ac62481cc2a97c5d10846",
       "project": "src/Portcullis.Cli/Portcullis.Cli.csproj",
       "assembly": "Portcullis.Cli.dll"
     }
