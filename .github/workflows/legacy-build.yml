@@ -104,7 +104,7 @@ jobs:
         run: .\scripts\2-build-legacy.ps1
 
       - name: Upload the published site
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: legacy-site
           # Uploaded relative to the work root, so a download into another work root
@@ -118,7 +118,7 @@ jobs:
 
       - name: Upload MSBuild binary logs
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: legacy-build-logs
           path: ${{ runner.temp }}\nopbench\logs
@@ -148,13 +148,13 @@ jobs:
           [System.IO.File]::AppendAllText($env:GITHUB_ENV, "NOPBENCH_WORK=$env:RUNNER_TEMP\nopbench`n")
 
       - name: Download the published site
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: legacy-site
           path: ${{ runner.temp }}\nopbench
 
       - name: Download the chain's tools
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: chain-tools
           path: ${{ runner.temp }}\nopbench\tools\chain
@@ -191,7 +191,7 @@ jobs:
 
       - name: Upload the traffic set
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: nopcommerce-traffic
           # Relative to the work root, so a download into another work root recreates
@@ -207,7 +207,7 @@ jobs:
 
       - name: Upload the replay
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: nopcommerce-replay
           # Relative to the work root, like the traffic set: replay\ and state\.
@@ -224,7 +224,7 @@ jobs:
 
       - name: Upload diagnostics
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: legacy-iis-diagnostics
           path: ${{ runner.temp }}\nopbench\diagnostics
@@ -252,13 +252,13 @@ jobs:
           [System.IO.File]::AppendAllText($env:GITHUB_ENV, "NOPBENCH_WORK=$env:RUNNER_TEMP/nopbench`n")
 
       - name: Download the chain's tools
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: chain-tools
           path: ${{ runner.temp }}/nopbench/tools/chain
 
       - name: Download the replay
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: nopcommerce-replay
           path: ${{ runner.temp }}/nopbench
@@ -274,7 +274,7 @@ jobs:
 
       - name: Upload the evidence pack
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: nopcommerce-evidence-pack
           path: ${{ runner.temp }}/nopbench/replay/evidence
